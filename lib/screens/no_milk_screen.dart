@@ -4,6 +4,7 @@ import '../data/no_milk_repository.dart';
 class NoMilkScreen extends StatefulWidget {
   const NoMilkScreen({super.key, required this.language});
   final String language;
+
   @override
   State<NoMilkScreen> createState() => _NoMilkScreenState();
 }
@@ -13,9 +14,11 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   final _note = TextEditingController();
   late Future<List<Map<String, Object?>>> _accounts;
   List<Map<String, Object?>> _rows = [];
-  String? _accountId;
+  final Set<String> _selectedIds = {};
   DateTime _day = DateTime.now();
   bool _saving = false;
+  bool _showDetails = false;
+
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) =>
       _ur ? u : widget.language == 'hi' ? h : e;
@@ -42,35 +45,309 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
     if (picked != null && mounted) setState(() => _day = picked);
   }
 
+  void _toggleAll(bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedIds
+          ..clear()
+          ..addAll(_rows.map((row) => row['id'] as String));
+      } else {
+        _selectedIds.clear();
+      }
+    });
+  }
+
   Future<void> _save() async {
-    if (_accountId == null) return;
+    if (_selectedIds.isEmpty || _saving) return;
     setState(() => _saving = true);
-    try {
-      await _repo.markNoMilk(
-          accountId: _accountId!, day: _day, note: _note.text);
-      if (!mounted) return;
+    var saved = 0;
+    final failures = <String>[];
+    for (final row in _rows) {
+      final id = row['id'] as String;
+      if (!_selectedIds.contains(id)) continue;
+      final name = row['customer_name'] as String;
+      try {
+        await _repo.markNoMilk(accountId: id, day: _day, note: _note.text);
+        saved++;
+      } catch (error) {
+        failures.add('$name: ${error is StateError ? error.message : error}');
+      }
+    }
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (saved > 0 && failures.isEmpty) {
       _note.clear();
+      setState(() {
+        _showDetails = false;
+        _selectedIds.clear();
+      });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(t('ناگا کا دن محفوظ ہو گیا', 'No-milk day saved',
-              'दूध न आने का दिन सेव हो गया'))));
-    } catch (error) {
-      if (!mounted) return;
-      final message = error is StateError
-          ? error.message
-          : t('ریکارڈ محفوظ نہیں ہو سکا', 'Could not save record',
-              'रिकॉर्ड सेव नहीं हो सका');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-    } finally {
-      if (mounted) setState(() => _saving = false);
+        content: Text(t('ناگا کامیابی سے درج کر دیا گیا',
+            'No-milk day saved successfully',
+            'दूध न आने का दिन सफलतापूर्वक सेव हो गया')),
+      ));
+    } else {
+      final message = [
+        if (saved > 0)
+          t('$saved کھاتوں میں ناگا محفوظ ہوا',
+              'Saved for $saved account(s)', '$saved खातों में सेव हुआ'),
+        ...failures.take(2),
+        if (failures.length > 2) '+ ${failures.length - 2} more',
+      ].join('\n');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message.isEmpty
+            ? t('ریکارڈ محفوظ نہیں ہو سکا', 'Could not save record',
+                'रिकॉर्ड सेव नहीं हो सका')
+            : message),
+        duration: const Duration(seconds: 5),
+      ));
+      if (saved > 0) {
+        setState(() {
+          _selectedIds.removeWhere((id) =>
+              !_rows.any((row) => row['id'] == id));
+        });
+      }
     }
   }
 
   InputDecoration _dec(String label) => InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)));
+        labelText: label,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      );
+
+  Widget _header(String title, {VoidCallback? onBack}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0649AE), Color(0xFF0879D5)],
+          ),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            if (onBack != null) ...[
+              InkWell(
+                onTap: onBack,
+                child: const Icon(Icons.arrow_back, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _accountRow(Map<String, Object?> row) {
+    final id = row['id'] as String;
+    final selected = _selectedIds.contains(id);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xFFFFF8D9) : Colors.white,
+        border: Border.all(
+          color: selected ? const Color(0xFFE2B52D) : const Color(0xFFB8D8F2),
+          width: 1.3,
+        ),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: CheckboxListTile(
+        value: selected,
+        activeColor: const Color(0xFF08A832),
+        controlAffinity: ListTileControlAffinity.trailing,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        onChanged: (value) => setState(() {
+          if (value == true) {
+            _selectedIds.add(id);
+          } else {
+            _selectedIds.remove(id);
+          }
+        }),
+        secondary: const Icon(
+          Icons.local_drink_rounded,
+          color: Color(0xFF0756C9),
+          size: 31,
+        ),
+        title: Text(
+          '#${row['account_number']}  ${row['customer_name']}',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+        ),
+      ),
+    );
+  }
+
+  Widget _selectionView() => ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          _header(t('ناگا درج کریں', 'Record No-Milk Day', 'नागा दर्ज करें')),
+          const SizedBox(height: 14),
+          TextField(
+            decoration: _dec(t('نام یا کھاتہ نمبر تلاش کریں',
+                'Search name or account number', 'नाम या खाता नंबर खोजें'))
+                .copyWith(prefixIcon: const Icon(Icons.search)),
+            onChanged: (value) => setState(() {
+              // Filtering is applied below without changing the stored selection.
+              _search = value.trim().toLowerCase();
+            }),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE7F3FF),
+              border: Border.all(color: const Color(0xFF8FC5F2)),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: CheckboxListTile(
+              value: _rows.isNotEmpty && _selectedIds.length == _rows.length,
+              activeColor: const Color(0xFF08A832),
+              controlAffinity: ListTileControlAffinity.trailing,
+              title: Text(
+                t('تمام کھاتے منتخب کریں', 'Select all accounts',
+                    'सभी खाते चुनें'),
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              onChanged: (value) => _toggleAll(value == true),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ..._rows.where((row) {
+            final query = _search;
+            final name = (row['customer_name'] as String).toLowerCase();
+            final number = (row['account_number']?.toString() ?? '');
+            return query.isEmpty || name.contains(query) || number.contains(query);
+          }).map(_accountRow),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAE5FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFB6A5E8)),
+            ),
+            child: Text(
+              t('منتخب کھاتے: ${_selectedIds.length}',
+                  'Selected accounts: ${_selectedIds.length}',
+                  'चुने गए खाते: ${_selectedIds.length}'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: _selectedIds.isEmpty
+                  ? null
+                  : () => setState(() => _showDetails = true),
+              icon: const Icon(Icons.arrow_forward),
+              label: Text(t('اگلا', 'Next', 'आगे')),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF08A832),
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+              ),
+            ),
+          ),
+        ],
+      );
+
+  String _search = '';
+
+  Widget _detailsView() => ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          _header(
+            t('ناگا کی تفصیل', 'No-Milk Details', 'नागा का विवरण'),
+            onBack: () => setState(() => _showDetails = false),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF2C6),
+              border: Border.all(color: const Color(0xFFE2A000)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              t('منتخب کھاتے: ${_selectedIds.length}',
+                  'Selected accounts: ${_selectedIds.length}',
+                  'चुने गए खाते: ${_selectedIds.length}'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(t('تاریخ', 'Date', 'तारीख'),
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          OutlinedButton.icon(
+            onPressed: _pickDate,
+            icon: const Icon(Icons.calendar_month, color: Color(0xFF0756C9)),
+            label: Text('${_day.day} ${_day.month} ${_day.year}'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              foregroundColor: Colors.black87,
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFF9CC9ED)),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _note,
+            maxLines: 2,
+            decoration: _dec(t('نوٹ / وجہ (اختیاری)', 'Note / reason (optional)',
+                'नोट / कारण (वैकल्पिक)'))
+                .copyWith(
+              suffixIcon: const Icon(Icons.edit, color: Color(0xFF0756C9)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _showDetails = false),
+                  icon: const Icon(Icons.close),
+                  label: Text(t('منسوخ', 'Cancel', 'रद्द करें')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: const Icon(Icons.check_circle),
+                  label: Text(_saving
+                      ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है')
+                      : t('محفوظ کریں', 'Save', 'सेव करें')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF08A832),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) => Directionality(
@@ -89,70 +366,17 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (snapshot.hasError) return Center(child: Text(snapshot.error.toString()));
+              if (snapshot.hasError) {
+                return Center(child: Text(snapshot.error.toString()));
+              }
               _rows = snapshot.data ?? [];
               if (_rows.isEmpty) {
-                return Center(child: Text(t('پہلے نیا کھاتہ بنائیں',
-                    'Create an account first', 'पहले खाता बनाएँ')));
+                return Center(
+                  child: Text(t('پہلے نیا کھاتہ بنائیں', 'Create an account first',
+                      'पहले खाता बनाएँ')),
+                );
               }
-              _accountId ??= _rows.first['id'] as String;
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: _accountId,
-                    decoration: _dec(t('گاہک کا کھاتہ', 'Customer account',
-                        'ग्राहक खाता')),
-                    items: _rows.map((row) => DropdownMenuItem(
-                      value: row['id'] as String,
-                      child: Text('#${row['account_number']} — ${row['customer_name']}'),
-                    )).toList(),
-                    onChanged: (value) => setState(() => _accountId = value),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _pickDate,
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text('${_day.day}/${_day.month}/${_day.year}'),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF2C6),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE2A000)),
-                    ),
-                    child: Text(t(
-                      'اس تاریخ پر اس گاہک کا دودھ نہیں آیا۔ یہ اندراج دودھ کی رقم صفر رکھے گا اور ماہانہ کھاتے میں ناگا کے طور پر نظر آئے گا۔',
-                      'No milk was received from this customer on this date. This records a zero-milk day and displays it in the monthly ledger.',
-                      'इस तारीख को इस ग्राहक का दूध नहीं आया। यह शून्य-दूध दिन दर्ज करेगा और मासिक खाते में दिखेगा।',
-                    )),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _note,
-                    maxLines: 2,
-                    decoration: _dec(t('نوٹس (اختیاری)', 'Notes (optional)',
-                        'नोट्स (वैकल्पिक)')),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: const Icon(Icons.event_busy),
-                      label: Text(_saving
-                          ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है')
-                          : t('ناگا محفوظ کریں', 'Save No-Milk Day',
-                              'नागा सेव करें')),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFE2A000),
-                          foregroundColor: Colors.white),
-                    ),
-                  ),
-                ],
-              );
+              return _showDetails ? _detailsView() : _selectionView();
             },
           ),
         ),
