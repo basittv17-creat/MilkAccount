@@ -81,11 +81,55 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
         _showDetails = false;
         _selectedIds.clear();
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(t('ناگا کامیابی سے درج کر دیا گیا',
-            'No-milk day saved successfully',
-            'दूध न आने का दिन सफलतापूर्वक सेव हो गया')),
-      ));
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFF08A832),
+                size: 76,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                t(
+                  'ناگا کامیابی سے درج کر دیا گیا',
+                  'No-milk day saved successfully',
+                  'दूध न आने का दिन सफलतापूर्वक सेव हो गया',
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(dialogContext),
+              icon: const Icon(Icons.check),
+              label: Text(t('ٹھیک ہے', 'OK', 'ठीक है')),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF08A832),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     } else {
       final message = [
         if (saved > 0)
