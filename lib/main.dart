@@ -11,6 +11,7 @@ import 'screens/reports_screen.dart';
 import 'l10n/language_support.dart';
 import 'screens/backup_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,15 +27,24 @@ class MilkAccountApp extends StatefulWidget {
 
 class _MilkAccountAppState extends State<MilkAccountApp> {
   late String language;
+  bool splashComplete = false;
+
   @override
   void initState() {
     super.initState();
     language = widget.preferences.getString('app_language') ?? '';
   }
+
   Future<void> selectLanguage(String value) async {
     await widget.preferences.setString('app_language', value);
-    if (mounted) setState(() => language = value);
+    if (mounted) {
+      setState(() {
+        language = value;
+        splashComplete = false;
+      });
+    }
   }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Milk Account', debugShowCheckedModeBanner: false,
@@ -42,7 +52,13 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
     supportedLocales: LanguageSupport.activeLocales,
     localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0756C9)), scaffoldBackgroundColor: const Color(0xFFF3F9FF)),
-    home: language.isEmpty ? LanguageScreen(onSelect: selectLanguage) : Dashboard(language: language, onLanguage: selectLanguage),
+    home: language.isEmpty
+      ? LanguageScreen(onSelect: selectLanguage)
+      : splashComplete
+        ? Dashboard(language: language, onLanguage: selectLanguage)
+        : SplashScreen(onFinished: () {
+            if (mounted) setState(() => splashComplete = true);
+          }),
   );
 }
 
