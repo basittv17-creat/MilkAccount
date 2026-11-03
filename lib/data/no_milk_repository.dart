@@ -10,7 +10,13 @@ class NoMilkRepository {
   Future<List<Map<String, Object?>>> activeAccounts() async =>
       (await _database.database).query(
         'accounts',
-        columns: ['id', 'account_number', 'customer_name'],
+        columns: [
+          'id',
+          'account_number',
+          'customer_name',
+          'country_code',
+          'phone_number',
+        ],
         where: 'is_active = 1',
         orderBy: 'account_number ASC',
       );

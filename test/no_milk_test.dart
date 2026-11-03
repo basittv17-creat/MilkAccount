@@ -13,6 +13,8 @@ void main() {
   test('records no-milk day and includes it in monthly ledger', () async {
     await AccountRepository().createAccount(
       customerName: 'Phase9 Naga Customer',
+      countryCode: '+44',
+      phoneNumber: '7700900123',
       startAt: DateTime(2026, 11, 1),
       milkRatePaisa: 10000,
     );
@@ -20,6 +22,10 @@ void main() {
     final account = (await db.query('accounts',
       where: 'customer_name = ?', whereArgs: ['Phase9 Naga Customer'])).single;
     final id = account['id'] as String;
+    final nagaAccounts = await NoMilkRepository().activeAccounts();
+    final nagaAccount = nagaAccounts.singleWhere((row) => row['id'] == id);
+    expect(nagaAccount['country_code'], '+44');
+    expect(nagaAccount['phone_number'], '7700900123');
     await NoMilkRepository().markNoMilk(
       accountId: id,
       day: DateTime(2026, 11, 3),

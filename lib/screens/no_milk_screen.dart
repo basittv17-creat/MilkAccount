@@ -271,6 +271,7 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   Widget _accountRow(Map<String, Object?> row) {
     final id = row['id'] as String;
     final selected = _selectedIds.contains(id);
+    final phone = _phone(row);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -301,6 +302,15 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
         title: Text(
           '#${row['account_number']}  ${row['customer_name']}',
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+        ),
+        subtitle: Text(
+          phone.isEmpty
+              ? t('فون نمبر موجود نہیں', 'No phone number saved', 'फ़ोन नंबर सेव नहीं है')
+              : phone,
+          style: TextStyle(
+            color: phone.isEmpty ? Colors.red.shade700 : Colors.blueGrey.shade700,
+            fontSize: 12,
+          ),
         ),
       ),
     );
