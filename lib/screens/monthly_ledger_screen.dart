@@ -174,7 +174,7 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
                                   .toStringAsFixed(3) +
                               ' kg   •   ' +
                               t('اندراجات: ', 'Entries: ', 'एंट्री: ') +
-                              (values['milk_entries'] ?? 0).toString(),
+                              (values['milk_entries'] ?? 0).toString() +
                               '   •   ' +
                               t('ناگا کے دن: ', 'No-milk days: ', 'नागा दिन: ') +
                               (values['no_milk_days'] ?? 0).toString(),
