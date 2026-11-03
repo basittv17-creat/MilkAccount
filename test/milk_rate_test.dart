@@ -67,4 +67,77 @@ void main() {
         [20000, 30000]);
     await AppDatabase.instance.close();
   });
+
+  test('monthly rate change recalculates only selected month entries', () async {
+    final accounts = AccountRepository();
+    await accounts.createAccount(
+      customerName: 'Monthly Isolation Customer',
+      startAt: DateTime(2026, 1, 1),
+      milkRatePaisa: 10000,
+    );
+    final db = await AppDatabase.instance.database;
+    final account = (await db.query(
+      'accounts',
+      where: 'customer_name = ?',
+      whereArgs: ['Monthly Isolation Customer'],
+    )).single;
+    final id = account['id'] as String;
+    final entries = MilkEntryRepository();
+
+    await entries.createEntry(
+      accountId: id,
+      recordedAt: DateTime.utc(2026, 1, 10),
+      quantityGrams: 2000,
+      ratePaisaPerKg: 10000,
+    );
+    await entries.createEntry(
+      accountId: id,
+      recordedAt: DateTime.utc(2026, 2, 10),
+      quantityGrams: 3000,
+      ratePaisaPerKg: 10000,
+    );
+
+    final changed = await MilkRateRepository().updateMonthEntries(
+      accountIds: [id],
+      month: DateTime(2026, 1),
+      ratePaisaPerKg: 15000,
+    );
+    expect(changed, 1);
+
+    final rows = await db.query(
+      'milk_entries',
+      where: 'account_id = ?',
+      whereArgs: [id],
+      orderBy: 'recorded_at ASC',
+    );
+    expect(rows.map((row) => row['rate_paisa_per_kg']).toList(),
+        [15000, 10000]);
+    expect(rows.map((row) => row['total_paisa']).toList(),
+        [30000, 30000]);
+
+    final accountBeforeFutureChange = (await db.query(
+      'accounts', where: 'id = ?', whereArgs: [id],
+    )).single;
+    expect(accountBeforeFutureChange['milk_rate_paisa'], 10000);
+
+    await MilkRateRepository().updateFutureRate(
+      accountIds: [id],
+      ratePaisaPerKg: 20000,
+    );
+    final updatedAccount = (await db.query(
+      'accounts', where: 'id = ?', whereArgs: [id],
+    )).single;
+    expect(updatedAccount['milk_rate_paisa'], 20000);
+
+    final unchangedRows = await db.query(
+      'milk_entries',
+      where: 'account_id = ?',
+      whereArgs: [id],
+      orderBy: 'recorded_at ASC',
+    );
+    expect(unchangedRows.map((row) => row['rate_paisa_per_kg']).toList(),
+        [15000, 10000]);
+    await AppDatabase.instance.close();
+  });
+
 }
