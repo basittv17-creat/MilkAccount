@@ -10,7 +10,11 @@ Use the supplied Urdu roadmap screenshot as the visual reference: dairy-blue gra
 - Responsive starter dashboard with Milk Entry, Advance, and Accounts action cards.
 - Bottom navigation: Home, Accounts, Reports, Settings.
 - Reserved compact ad banner area; no interstitial or full-screen ads.
+- Reproducible Flutter platform bootstrap script for Android and Web.
 - GitHub Actions checks for formatting, analysis, tests, Android APK, and Web build.
+
+## Platform generation
+The repository currently stores the Flutter application source, not generated Android or Web platform scaffolding. Before building, `tool/prepare_platforms.sh` runs `flutter create --platforms=android,web` using the same stable Flutter SDK as CI. This avoids hand-written or SDK-mismatched Gradle files and creates the required platform files in a clean checkout. Run the script locally once after installing Flutter, or let CI run it automatically.
 
 ## Not yet implemented
 Customer records, ledger calculations, advances, milk transactions, Naga days, rate history, database migrations, backup/restore, data transfer, PDF/Excel exports, SMS/WhatsApp delivery, and production AdMob integration are deliberately deferred. They require dedicated data-model design and tests before storing real customer/accounting data.

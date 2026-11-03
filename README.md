@@ -9,10 +9,11 @@ This release establishes the app theme, Urdu/English first-launch language selec
 
 ## Run locally
 1. Install Flutter stable.
-2. Run `flutter pub get`.
-3. Run `flutter run`.
+2. Run `bash tool/prepare_platforms.sh` once to generate any missing Android and Web platform folders.
+3. Run `flutter pub get`.
+4. Run `flutter run`.
 
 ## Validation
-GitHub Actions runs Dart formatting, Flutter analysis, widget tests, Android release APK build, and Web release build on pushes to `main`.
+GitHub Actions generates missing Android/Web platform scaffolding with the configured Flutter stable SDK, then runs Dart formatting, Flutter analysis, widget tests, Android release APK build, and Web release build on pushes to `main`. Generated platform files are created in the clean CI workspace; the script is version-controlled so the process is repeatable and does not rely on manually copied Gradle files.
 
 See [Phase 1 scope](docs/PHASE_1_SCOPE.md).

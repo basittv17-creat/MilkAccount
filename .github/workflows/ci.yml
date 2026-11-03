@@ -21,6 +21,8 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Generate missing Android and Web platform files
+        run: bash tool/prepare_platforms.sh
       - name: Install dependencies
         run: flutter pub get
       - name: Format Dart source
