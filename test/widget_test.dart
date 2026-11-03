@@ -20,6 +20,7 @@ void main() {
     await tester.pumpWidget(MilkAccountApp(preferences: preferences));
     expect(find.text('دودھ کا اندراج'), findsOneWidget);
     expect(find.text('ایڈوانس'), findsOneWidget);
-    expect(find.text('کھاتے'), findsOneWidget);
+    // "کھاتے" is intentionally shown in both the dashboard card and bottom navigation.
+    expect(find.text('کھاتے'), findsNWidgets(2));
   });
 }
