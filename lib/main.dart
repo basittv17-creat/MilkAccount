@@ -11,7 +11,6 @@ import 'screens/reports_screen.dart';
 import 'l10n/language_support.dart';
 import 'screens/backup_screen.dart';
 import 'screens/settings_screen.dart';
-import 'data/home_dashboard_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,24 +97,8 @@ class _DashboardState extends State<Dashboard> {
   int tab=0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool get rtl=>LanguageSupport.isRtl(widget.language);
-  final _dashboardRepository = HomeDashboardRepository();
-  late Future<Map<String, Object?>> _dashboardFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _dashboardFuture = _dashboardRepository.load(DateTime.now());
-  }
-
-  void _refreshDashboard() {
-    if (mounted) setState(() => _dashboardFuture = _dashboardRepository.load(DateTime.now()));
-  }
-
-  String _money(Object? value) => 'Rs. ' + ((((value as int?) ?? 0) / 100).toStringAsFixed(2));
-
   Future<void> _open(Widget page) async {
     await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => page));
-    _refreshDashboard();
   }
   @override
   Widget build(BuildContext context) {
@@ -125,7 +108,7 @@ class _DashboardState extends State<Dashboard> {
       appBar:PreferredSize(preferredSize:const Size.fromHeight(76),child:AppBar(
         backgroundColor:const Color(0xFF0649AE),foregroundColor:Colors.white,
         leading:IconButton(icon:const Icon(Icons.menu_rounded,size:30),onPressed:()=>_scaffoldKey.currentState?.openDrawer()),titleSpacing:0,
-        title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:45,height:45,decoration:BoxDecoration(color:Colors.white.withOpacity(.12),border:Border.all(color:Colors.white,width:2),borderRadius:const BorderRadius.all(Radius.circular(12))),child:const Icon(Icons.local_drink_rounded,size:32,color:Colors.white)),const SizedBox(width:9),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Milk Account',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,fontStyle:FontStyle.italic,color:Colors.white)),Text(tr(widget.language,'brand'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:Colors.white))]))]),
+        title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:49,height:49,decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFB9E6FF),width:2),borderRadius:const BorderRadius.all(Radius.circular(15)),boxShadow:const[BoxShadow(color:Color(0x44001D55),blurRadius:7,offset:Offset(0,2))]),child:Stack(alignment:Alignment.center,children:[const Icon(Icons.agriculture_rounded,size:30,color:Color(0xFF0649AE)),Positioned(right:2,bottom:1,child:Container(width:17,height:17,decoration:const BoxDecoration(color:Color(0xFF079B48),shape:BoxShape.circle),child:const Icon(Icons.water_drop_rounded,size:11,color:Colors.white))) ])),const SizedBox(width:9),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Milk Account',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,fontStyle:FontStyle.italic,color:Colors.white)),Text(tr(widget.language,'brand'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:Colors.white))]))]),
         actions:[IconButton(onPressed:(){},icon:const Icon(Icons.notifications_none_rounded,size:28))],
         flexibleSpace:Stack(fit:StackFit.expand,children:[const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF003B91),Color(0xFF0879D5)]))),const Align(alignment:Alignment.centerLeft,child:Opacity(opacity:.18,child:Text('🐄',style:TextStyle(fontSize:40)))),const Align(alignment:Alignment.centerRight,child:Opacity(opacity:.18,child:Text('🥛',style:TextStyle(fontSize:36))))]),
       )),
@@ -138,193 +121,108 @@ class _DashboardState extends State<Dashboard> {
       ]),
     ));
   }
-  Widget home() => FutureBuilder<Map<String, Object?>>(
-    future: _dashboardFuture,
-    builder: (context, snapshot) {
-      final data = snapshot.data;
-      return RefreshIndicator(
-        onRefresh: () async => _refreshDashboard(),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(15, 12, 15, 20),
-          children: [
-            Container(
-              height: 94,
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFE7F8FF), Colors.white, Color(0xFFD9F0FF)]),
-                border: Border.all(color: const Color(0xFF91CFFF), width: 1.5),
-                borderRadius: const BorderRadius.all(Radius.circular(17)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.water_drop_rounded, color: Color(0xFF0875E1), size: 48),
-                const SizedBox(width: 8),
-                Expanded(child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: const BoxDecoration(color: Color(0xFFFFD83D), borderRadius: BorderRadius.all(Radius.circular(5))),
-                        child: const Text('Ad', style: TextStyle(fontWeight: FontWeight.w900)),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(child: Text(tr(widget.language, 'ad'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900))),
-                    ]),
-                    const SizedBox(height: 5),
-                    Text(tr(widget.language, 'adSub'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-                  ],
-                )),
-                const SizedBox(width: 6),
-                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.info_outline, size: 17),
-                  const SizedBox(height: 5),
-                  Text(tr(widget.language, 'learn'), style: const TextStyle(color: Color(0xFF0756C9), fontSize: 10, fontWeight: FontWeight.bold)),
-                ]),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            if (snapshot.connectionState == ConnectionState.waiting)
-              const LinearProgressIndicator()
-            else if (snapshot.hasError)
-              Card(
-                color: Colors.white,
-                child: ListTile(
-                  leading: const Icon(Icons.error_outline, color: Colors.red),
-                  title: Text(tr(widget.language, 'dashboardError')),
-                  trailing: IconButton(onPressed: _refreshDashboard, icon: const Icon(Icons.refresh)),
-                ),
-              )
-            else if (data != null) ...[
-              _dashboardHeading(tr(widget.language, 'todaySummary'), Icons.today_rounded),
-              Row(children: [
-                Expanded(child: _dashboardMetric(
-                  tr(widget.language, 'todayMilk'),
-                  ((data['today_quantity_grams'] as int) / 1000).toStringAsFixed(3) + ' kg',
-                  Icons.water_drop_rounded, const Color(0xFFDFF1FF), const Color(0xFF0875E1),
-                )),
-                const SizedBox(width: 9),
-                Expanded(child: _dashboardMetric(
-                  tr(widget.language, 'todayAmount'), _money(data['today_amount_paisa']),
-                  Icons.payments_rounded, const Color(0xFFE0F8E8), const Color(0xFF079B37),
-                )),
-              ]),
-              const SizedBox(height: 9),
-              Row(children: [
-                Expanded(child: _dashboardMetric(
-                  tr(widget.language, 'totalAdvance'), _money(data['advance_given_paisa']),
-                  Icons.savings_rounded, const Color(0xFFFFF2C6), const Color(0xFFE2A000),
-                )),
-                const SizedBox(width: 9),
-                Expanded(child: _dashboardMetric(
-                  tr(widget.language, 'remainingAdvance'), _money(data['remaining_advance_paisa']),
-                  Icons.account_balance_wallet_rounded, const Color(0xFFE8E5FF), const Color(0xFF6650B8),
-                )),
-              ]),
-              const SizedBox(height: 17),
-              _dashboardHeading(tr(widget.language, 'monthlySummary'), Icons.calendar_month_rounded),
-              _monthlySummary(data['month_summary'] as Map<String, int>),
-              const SizedBox(height: 17),
-              _dashboardHeading(tr(widget.language, 'dailyMilkList'), Icons.view_day_rounded),
-              _dailyMilkList(data['daily_totals'] as List<Map<String, Object?>>),
-            ],
-            const SizedBox(height: 18),
-            _dashboardHeading(tr(widget.language, 'quickActions'), Icons.dashboard_customize_rounded),
-            action('milk','milkSub',Icons.local_drink_rounded,const Color(0xFF0875E1),const Color(0xFFDFF1FF)),
-            action('advance','advanceSub',Icons.monetization_on_rounded,const Color(0xFFE2A000),const Color(0xFFFFF2C6)),
-            action('accounts','accountsSub',Icons.receipt_long_rounded,const Color(0xFF079B37),const Color(0xFFE0F8E8)),
-            Container(
-              height: 72,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(18)),
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE5FAFF), Color(0xFFBCEBFF), Color(0xFF8ED68B)]),
-              ),
-              child: const Stack(alignment: Alignment.center, children: [
-                Positioned(left: 18, bottom: -10, child: Icon(Icons.grass_rounded, size: 64, color: Colors.white)),
-                Icon(Icons.water_drop_rounded, color: Colors.white, size: 48),
-                Positioned(right: 18, bottom: -10, child: Icon(Icons.grass_rounded, size: 64, color: Colors.white)),
-              ]),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-
-  Widget _dashboardHeading(String title, IconData icon) => Padding(
-    padding: const EdgeInsets.only(bottom: 9),
-    child: Row(children: [
-      Icon(icon, color: const Color(0xFF0649AE)),
-      const SizedBox(width: 7),
-      Expanded(child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF123B65)))),
-    ]),
-  );
-
-  Widget _dashboardMetric(String title, String value, IconData icon, Color tint, Color color) => Container(
-    constraints: const BoxConstraints(minHeight: 104),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(15), border: Border.all(color: color.withOpacity(.35))),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, color: color, size: 23),
-      const SizedBox(height: 7),
-      Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 4),
-      FittedBox(alignment: AlignmentDirectional.centerStart, fit: BoxFit.scaleDown, child: Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: color))),
-    ]),
-  );
-
-  Widget _monthlySummary(Map<String, int> summary) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFB7D5EF))),
-    child: Column(children: [
-      Row(children: [
-        Expanded(child: _summaryValue(tr(widget.language, 'milkAmount'), _money(summary['milk_amount_paisa']))),
-        Expanded(child: _summaryValue(tr(widget.language, 'monthBalance'), _money(summary['balance_paisa']))),
-      ]),
-      const Divider(height: 22),
-      Row(children: [
-        Expanded(child: _summaryValue(tr(widget.language, 'milkQuantity'), ((summary['milk_quantity_grams'] ?? 0) / 1000).toStringAsFixed(3) + ' kg')),
-        Expanded(child: _summaryValue(tr(widget.language, 'milkEntries'), (summary['milk_entries'] ?? 0).toString())),
-      ]),
-    ]),
-  );
-
-  Widget _summaryValue(String title, String value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget home() => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(15, 14, 15, 22),
     children: [
-      Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF536477))),
-      const SizedBox(height: 4),
-      Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF123B65))),
+      Container(
+        height: 94,
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE7F8FF), Colors.white, Color(0xFFD9F0FF)],
+          ),
+          border: Border.all(color: const Color(0xFF91CFFF), width: 1.5),
+          borderRadius: const BorderRadius.all(Radius.circular(17)),
+          boxShadow: const [BoxShadow(color: Color(0x14004A91), blurRadius: 7, offset: Offset(0, 3))],
+        ),
+        child: Row(children: [
+          Container(
+            width: 67,
+            height: 67,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF0879D5), Color(0xFF003B91)]),
+              borderRadius: BorderRadius.all(Radius.circular(13)),
+            ),
+            child: const Stack(alignment: Alignment.center, children: [
+              Icon(Icons.local_drink_rounded, color: Colors.white, size: 43),
+              Positioned(right: 3, top: 3, child: Icon(Icons.auto_awesome, color: Color(0xFFFFD83D), size: 15)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: const BoxDecoration(color: Color(0xFFFFD83D), borderRadius: BorderRadius.all(Radius.circular(5))),
+                  child: const Text('Ad', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                ),
+                const SizedBox(width: 6),
+                Expanded(child: Text(tr(widget.language, 'ad'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF073B70)))),
+              ]),
+              const SizedBox(height: 5),
+              Text(tr(widget.language, 'adSub'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF38566F))),
+            ],
+          )),
+          const SizedBox(width: 5),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 17, color: Color(0xFF0756C9)),
+        ]),
+      ),
+      const SizedBox(height: 19),
+      action('milk','milkSub',Icons.local_drink_rounded,const Color(0xFF0875E1),const Color(0xFFE8F4FF)),
+      action('advance','advanceSub',Icons.monetization_on_rounded,const Color(0xFFE2A000),const Color(0xFFFFF6D9)),
+      action('accounts','accountsSub',Icons.receipt_long_rounded,const Color(0xFF079B37),const Color(0xFFE8F8EC)),
     ],
   );
 
-  Widget _dailyMilkList(List<Map<String, Object?>> rows) {
-    if (rows.isEmpty) {
-      return Card(color: Colors.white, child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(tr(widget.language, 'noDailyMilk')),
-      ));
-    }
-    return Column(children: rows.take(7).map((row) {
-      final day = DateTime.tryParse(row['day'].toString());
-      final label = day == null ? row['day'].toString() : day.day.toString().padLeft(2, '0') + '/' + day.month.toString().padLeft(2, '0') + '/' + day.year.toString();
-      return Card(
-        color: Colors.white,
-        elevation: 0,
-        margin: const EdgeInsets.only(bottom: 6),
-        child: ListTile(
-          dense: true,
-          leading: const CircleAvatar(backgroundColor: Color(0xFFDFF1FF), child: Icon(Icons.local_drink, color: Color(0xFF0875E1))),
-          title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(((row['quantity_grams'] as int) / 1000).toStringAsFixed(3) + ' kg • ' + row['entries'].toString() + ' ' + tr(widget.language, 'entries')),
-          trailing: Text(_money(row['amount_paisa']), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF079B37))),
+  Widget action(String title,String sub,IconData icon,Color color,Color tint) => Container(
+    margin: const EdgeInsets.only(bottom: 13),
+    decoration: BoxDecoration(
+      color: tint,
+      border: Border.all(color: color.withOpacity(.8), width: 1.7),
+      borderRadius: const BorderRadius.all(Radius.circular(22)),
+      boxShadow: const [BoxShadow(color: Color(0x18002D64), blurRadius: 7, offset: Offset(0, 3))],
+    ),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(Radius.circular(22)),
+      child: InkWell(
+        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        onTap: () => title=='accounts'
+          ? setState(()=>tab=1)
+          : title=='milk'
+            ? Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkEntryScreen(language:widget.language)))
+            : title=='advance'
+              ? Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>AdvanceScreen(language:widget.language)))
+              : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
+          child: Row(children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(color: color, borderRadius: const BorderRadius.all(Radius.circular(17))),
+              child: Icon(icon, color: Colors.white, size: 34),
+            ),
+            const SizedBox(width: 15),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr(widget.language,title), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Color(0xFF101820))),
+                const SizedBox(height: 3),
+                Text(tr(widget.language,sub), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF24364B))),
+              ],
+            )),
+            Icon(rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, size: 34, color: color),
+          ]),
         ),
-      );
-    }).toList());
-  }
+      ),
+    ),
+  );
 
-  Widget action(String title,String sub,IconData icon,Color color,Color tint)=>Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:tint,border:Border.all(color:color,width:1.6),borderRadius:const BorderRadius.all(Radius.circular(23)),boxShadow:const[BoxShadow(color:Color(0x16002D64),blurRadius:5,offset:Offset(0,3))]),child:InkWell(onTap:()=>title=='accounts'?setState(()=>tab=1):title=='milk'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkEntryScreen(language:widget.language))):title=='advance'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>AdvanceScreen(language:widget.language))):title=='ledger'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MonthlyLedgerScreen(language:widget.language))):title=='rates'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkRateScreen(language:widget.language))):title=='naga'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>NoMilkScreen(language:widget.language))):ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${tr(widget.language,title)} — ${tr(widget.language,'later')}'))),borderRadius:const BorderRadius.all(Radius.circular(23)),child:Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:17),child:Row(children:[CircleAvatar(radius:30,backgroundColor:color,child:Icon(icon,color:Colors.white,size:33)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(tr(widget.language,title),style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Color(0xFF101820))),Text(tr(widget.language,sub),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:13,color:Color(0xFF24364B)))])),const Icon(Icons.chevron_right_rounded,size:34)]))));
   Widget _buildDrawer() => Drawer(
     width: 310,
     child: SafeArea(
