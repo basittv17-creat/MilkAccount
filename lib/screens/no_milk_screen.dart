@@ -56,6 +56,9 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
     return '$code$number';
   }
 
+  String get _recordedTime =>
+      '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}';
+
   String _nagaMessage(Map<String, Object?> row) => t(
     'محترم ${row['customer_name']}، ${_day.day}/${_day.month}/${_day.year} کو دودھ نہیں آیا، اس لیے آج ناگا درج کیا گیا۔',
     'Dear ${row['customer_name']}, no milk was received on ${_day.day}/${_day.month}/${_day.year}. A no-milk day has been recorded.',
@@ -132,7 +135,12 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
       if (!_selectedIds.contains(id)) continue;
       final name = row['customer_name'] as String;
       try {
-        await _repo.markNoMilk(accountId: id, day: _day, note: _note.text);
+        await _repo.markNoMilk(
+          accountId: id,
+          day: _day,
+          note: _note.text,
+          recordedTime: _recordedTime,
+        );
         saved++;
         savedRows.add(row);
       } catch (error) {

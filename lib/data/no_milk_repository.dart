@@ -19,7 +19,14 @@ class NoMilkRepository {
     required String accountId,
     required DateTime day,
     String note = '',
+    String recordedTime = '00:00',
   }) async {
+    final timeParts = recordedTime.split(':');
+    final hour = timeParts.length == 2 ? int.tryParse(timeParts[0]) : null;
+    final minute = timeParts.length == 2 ? int.tryParse(timeParts[1]) : null;
+    if (hour == null || minute == null || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      throw ArgumentError.value(recordedTime, 'recordedTime', 'Expected HH:mm');
+    }
     if (accountId.trim().isEmpty) {
       throw ArgumentError.value(accountId, 'accountId', 'Account is required');
     }
@@ -54,6 +61,7 @@ class NoMilkRepository {
         'day': normalizedDay,
         'note': note.trim(),
         'created_at': now,
+        'recorded_time': recordedTime,
       }, conflictAlgorithm: ConflictAlgorithm.abort);
     } on DatabaseException catch (error) {
       if (error.isUniqueConstraintError()) {

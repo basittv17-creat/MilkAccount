@@ -21,7 +21,17 @@ void main() {
       where: 'customer_name = ?', whereArgs: ['Phase9 Naga Customer'])).single;
     final id = account['id'] as String;
     await NoMilkRepository().markNoMilk(
-      accountId: id, day: DateTime(2026, 11, 3), note: 'Customer absent');
+      accountId: id,
+      day: DateTime(2026, 11, 3),
+      note: 'Customer absent',
+      recordedTime: '08:30',
+    );
+    final savedNaga = (await db.query(
+      'no_milk_days',
+      where: 'account_id = ?',
+      whereArgs: [id],
+    )).single;
+    expect(savedNaga['recorded_time'], '08:30');
     final summary = await MonthlyLedgerRepository().summary(
       accountId: id, month: DateTime(2026, 11));
     expect(summary['no_milk_days'], 1);

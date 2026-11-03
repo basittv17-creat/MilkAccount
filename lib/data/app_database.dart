@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 class AppDatabase {
   AppDatabase._();
   static final AppDatabase instance = AppDatabase._();
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
   Database? _database;
 
   Future<Database> get database async {
@@ -80,6 +80,7 @@ class AppDatabase {
       CREATE TABLE no_milk_days (
         id TEXT PRIMARY KEY, account_id TEXT NOT NULL, day TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL,
+        recorded_time TEXT NOT NULL DEFAULT '00:00',
         UNIQUE(account_id, day),
         FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT
       )
@@ -91,6 +92,15 @@ class AppDatabase {
     if (oldVersion < 2) {
       await _createNoMilkDays(db);
       await db.insert('schema_info', {'key': 'migration_2', 'value': 'no_milk_days'});
+    }
+    if (oldVersion >= 2 && oldVersion < 3) {
+      await db.execute(
+        "ALTER TABLE no_milk_days ADD COLUMN recorded_time TEXT NOT NULL DEFAULT '00:00'",
+      );
+      await db.insert('schema_info', {
+        'key': 'migration_3',
+        'value': 'no_milk_recorded_time',
+      });
     }
   }
 
