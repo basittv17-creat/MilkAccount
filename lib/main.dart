@@ -4,384 +4,105 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final preferences = await SharedPreferences.getInstance();
-  runApp(MilkAccountApp(preferences: preferences));
+  runApp(MilkAccountApp(preferences: await SharedPreferences.getInstance()));
 }
 
 class MilkAccountApp extends StatefulWidget {
   const MilkAccountApp({super.key, required this.preferences});
   final SharedPreferences preferences;
-
   @override
   State<MilkAccountApp> createState() => _MilkAccountAppState();
 }
 
 class _MilkAccountAppState extends State<MilkAccountApp> {
-  late Locale _locale;
-  late bool _languageChosen;
-
+  late String language;
   @override
   void initState() {
     super.initState();
-    final saved = widget.preferences.getString('app_language');
-    _languageChosen = saved != null;
-    _locale = Locale(saved ?? 'ur');
+    language = widget.preferences.getString('app_language') ?? '';
   }
-
-  Future<void> _selectLanguage(String language) async {
-    await widget.preferences.setString('app_language', language);
-    if (!mounted) return;
-    setState(() {
-      _locale = Locale(language);
-      _languageChosen = true;
-    });
+  Future<void> selectLanguage(String value) async {
+    await widget.preferences.setString('app_language', value);
+    if (mounted) setState(() => language = value);
   }
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Milk Account',
-      debugShowCheckedModeBanner: false,
-      locale: _locale,
-      supportedLocales: const [Locale('ur'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0756C9),
-          primary: const Color(0xFF0756C9),
-          secondary: const Color(0xFF08A832),
-          surface: Colors.white,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF1F7FF),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0756C9),
-          foregroundColor: Colors.white,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      home: _languageChosen
-          ? DashboardScreen(locale: _locale, onLanguageChanged: _selectLanguage)
-          : LanguageSelectionScreen(onSelected: _selectLanguage),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Milk Account', debugShowCheckedModeBanner: false,
+    locale: Locale(language.isEmpty ? 'ur' : language),
+    supportedLocales: const [Locale('ur'), Locale('en'), Locale('hi')],
+    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+    theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0756C9)), scaffoldBackgroundColor: const Color(0xFFF3F9FF)),
+    home: language.isEmpty ? LanguageScreen(onSelect: selectLanguage) : Dashboard(language: language, onLanguage: selectLanguage),
+  );
 }
 
-class Copy {
-  static const Map<String, Map<String, String>> values = {
-    'ur': {
-      'choose': 'زبان منتخب کریں',
-      'next': 'آگے بڑھیں',
-      'brand': 'دودھ کا کھاتہ',
-      'milk': 'دودھ کا اندراج',
-      'milkSub': 'روزانہ کا دودھ درج کریں',
-      'advance': 'ایڈوانس',
-      'advanceSub': 'پیسے کی وصولی کی تفصیل',
-      'accounts': 'کھاتے',
-      'accountsSub': 'مکمل تفصیل والے کھاتے',
-      'home': 'ہوم',
-      'reports': 'رپورٹس',
-      'settings': 'سیٹنگز',
-      'welcome': 'آسان، تیز اور محفوظ حساب',
-      'coming': 'یہ حصہ اگلے مرحلے میں تیار ہوگا',
-      'urdu': 'اردو (پاکستان)',
-      'english': 'English',
-    },
-    'en': {
-      'choose': 'Select Language',
-      'next': 'Continue',
-      'brand': 'Milk Account',
-      'milk': 'Milk Entry',
-      'milkSub': 'Record daily milk',
-      'advance': 'Advance',
-      'advanceSub': 'Advance payment details',
-      'accounts': 'Accounts',
-      'accountsSub': 'Complete customer ledgers',
-      'home': 'Home',
-      'reports': 'Reports',
-      'settings': 'Settings',
-      'welcome': 'Simple, fast and secure accounting',
-      'coming': 'This section will be built in a later phase',
-      'urdu': 'Urdu (Pakistan)',
-      'english': 'English',
-    },
-  };
+const copy = <String, Map<String, String>>{
+  'ur': {'choose':'زبان منتخب کریں','continue':'جاری رکھیں','brand':'دودھ کا کھاتہ','milk':'دودھ کا اندراج','milkSub':'روزانہ کا دودھ درج کریں','advance':'ایڈوانس','advanceSub':'پہلے سے وصول کی گئی رقم','accounts':'کھاتے','accountsSub':'مکمل تفصیل والے کھاتے','home':'ہوم','reports':'رپورٹس','settings':'سیٹنگز','ad':'دودھ کی کوالٹی بہتر بنائیں!','adSub':'بہترین فیڈ، خوراک اور ڈیری پروڈکٹس','learn':'مزید جانیں','language':'زبان تبدیل کریں','later':'یہ سہولت اگلے مرحلے میں شامل ہوگی'},
+  'en': {'choose':'Select Language','continue':'Continue','brand':'Milk Account','milk':'Milk Entry','milkSub':'Add daily milk record','advance':'Advance','advanceSub':'Receive advance payment','accounts':'Accounts','accountsSub':'Complete account details','home':'Home','reports':'Reports','settings':'Settings','ad':'Improve Milk Quality!','adSub':'Best feed, nutrition and dairy products','learn':'Learn More','language':'Change language','later':'This feature will be added in a later phase'},
+  'hi': {'choose':'भाषा चुनें','continue':'जारी रखें','brand':'दूध का खाता','milk':'दूध की एंट्री','milkSub':'रोज़ाना का दूध दर्ज करें','advance':'एडवांस','advanceSub':'पहले से प्राप्त की गई राशि','accounts':'खाते','accountsSub':'पूरी जानकारी वाले खाते','home':'होम','reports':'रिपोर्ट','settings':'सेटिंग्स','ad':'दूध की गुणवत्ता बढ़ाएँ!','adSub':'बेहतर चारा, पोषण और डेयरी उत्पाद','learn':'और जानें','language':'भाषा बदलें','later':'यह सुविधा अगले चरण में जोड़ी जाएगी'},
+};
+String tr(String lang, String key) => copy[lang]?[key] ?? copy['en']![key]!;
 
-  static String get(String language, String key) =>
-      values[language]?[key] ?? values['en']![key]!;
-}
-
-class LanguageSelectionScreen extends StatefulWidget {
-  const LanguageSelectionScreen({super.key, required this.onSelected});
-  final ValueChanged<String> onSelected;
-
+class LanguageScreen extends StatefulWidget {
+  const LanguageScreen({super.key, required this.onSelect});
+  final ValueChanged<String> onSelect;
   @override
-  State<LanguageSelectionScreen> createState() =>
-      _LanguageSelectionScreenState();
+  State<LanguageScreen> createState() => _LanguageScreenState();
 }
-
-class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
+class _LanguageScreenState extends State<LanguageScreen> {
   String selected = 'ur';
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF003C9C), Color(0xFF16A9EF), Colors.white],
-            stops: [0, .48, 1],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  children: [
-                    const Icon(Icons.local_drink, size: 76, color: Colors.white),
-                    const SizedBox(height: 10),
-                    const Text('Milk Account',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white)),
-                    const Text('دودھ کا کھاتہ',
-                        style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 38),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFF9EDCFF), width: 3),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(Copy.get(selected, 'choose'),
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF062D70))),
-                          const SizedBox(height: 16),
-                          _languageTile('ur', '🇵🇰', Copy.get(selected, 'urdu')),
-                          _languageTile('en', '🇺🇸', Copy.get(selected, 'english')),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: () => widget.onSelected(selected),
-                              icon: const Icon(Icons.arrow_forward),
-                              label: Text(Copy.get(selected, 'next')),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF08A832),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _languageTile(String code, String flag, String title) {
-    final active = selected == code;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: InkWell(
-        onTap: () => setState(() => selected = code),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: active ? const Color(0xFF08A832) : const Color(0xFF9AB8D5), width: active ? 2 : 1),
-            color: active ? const Color(0xFFE8F8EC) : Colors.white,
-          ),
-          child: Row(
-            children: [
-              Text(flag, style: const TextStyle(fontSize: 26)),
-              const SizedBox(width: 14),
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-              Icon(active ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: active ? const Color(0xFF08A832) : Colors.blueGrey),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(body: Container(
+    decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter,end: Alignment.bottomCenter,colors:[Color(0xFF003B91),Color(0xFF159FE4),Colors.white],stops:[0,.55,1])),
+    child: SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(22),child: ConstrainedBox(constraints: const BoxConstraints(maxWidth:440),child: Column(children:[
+      const Icon(Icons.local_drink_rounded,size:82,color:Colors.white),const Text('Milk Account',style:TextStyle(fontSize:34,fontWeight:FontWeight.w900,color:Colors.white)),const Text('دودھ کا کھاتہ',style:TextStyle(fontSize:28,fontWeight:FontWeight.bold,color:Colors.white)),const SizedBox(height:28),
+      Container(width:double.infinity,padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(26),border:Border.all(color:const Color(0xFF9EDCFF),width:3)),child:Column(children:[
+        Text(tr(selected,'choose'),style:const TextStyle(fontSize:23,fontWeight:FontWeight.bold,color:Color(0xFF062D70))),const SizedBox(height:14),
+        for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])
+          ListTile(dense:true,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),tileColor:selected==option.$1?const Color(0xFFE8F8EC):Colors.white,leading:Text(option.$2,style:const TextStyle(fontSize:25)),title:Text(option.$3,style:const TextStyle(fontWeight:FontWeight.w700)),trailing:Icon(selected==option.$1?Icons.check_circle:Icons.radio_button_unchecked,color:selected==option.$1?Colors.green:Colors.blueGrey),onTap:()=>setState(()=>selected=option.$1)),
+        const SizedBox(height:12),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>widget.onSelect(selected),icon:const Icon(Icons.arrow_forward),label:Text(tr(selected,'continue')),style:FilledButton.styleFrom(backgroundColor:const Color(0xFF08A832),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:16))))
+      ]))
+    ]))))),
+  ));
 }
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.locale, required this.onLanguageChanged});
-  final Locale locale;
-  final ValueChanged<String> onLanguageChanged;
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+class Dashboard extends StatefulWidget {
+  const Dashboard({super.key,required this.language,required this.onLanguage});
+  final String language; final ValueChanged<String> onLanguage;
+  @override State<Dashboard> createState()=>_DashboardState();
 }
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  int _tab = 0;
-
+class _DashboardState extends State<Dashboard> {
+  int tab=0;
+  bool get rtl=>widget.language=='ur';
   @override
   Widget build(BuildContext context) {
-    final language = widget.locale.languageCode;
-    final rtl = language == 'ur';
-    final titles = [Copy.get(language, 'home'), Copy.get(language, 'accounts'), Copy.get(language, 'reports'), Copy.get(language, 'settings')];
-    return Directionality(
-      textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(icon: const Icon(Icons.menu), onPressed: () => _openMenu(context, language)),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.local_drink, size: 27),
-              const SizedBox(width: 7),
-              Flexible(child: Text(Copy.get(language, 'brand'), overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold))),
-            ],
-          ),
-          actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none))],
-        ),
-        body: _tab == 0
-            ? _home(language)
-            : _tab == 1
-                ? _placeholder(language, Copy.get(language, 'accounts'))
-                : _tab == 2
-                    ? _placeholder(language, Copy.get(language, 'reports'))
-                    : _placeholder(language, Copy.get(language, 'settings')),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (value) => setState(() => _tab = value),
-          destinations: [
-            NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: titles[0]),
-            NavigationDestination(icon: const Icon(Icons.people_outline), selectedIcon: const Icon(Icons.people), label: titles[1]),
-            NavigationDestination(icon: const Icon(Icons.bar_chart), label: titles[2]),
-            NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings), label: titles[3]),
-          ],
-        ),
-      ),
-    );
+    final labels=['home','accounts','reports','settings'];
+    return Directionality(textDirection:rtl?TextDirection.rtl:TextDirection.ltr,child:Scaffold(
+      appBar:PreferredSize(preferredSize:const Size.fromHeight(78),child:AppBar(
+        backgroundColor:const Color(0xFF0649AE),foregroundColor:Colors.white,
+        leading:IconButton(icon:const Icon(Icons.menu_rounded,size:30),onPressed:menu),titleSpacing:0,
+        title:Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.local_drink_rounded,size:42),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Milk Account',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)),Text(tr(widget.language,'brand'),style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:Colors.white))]))]),
+        actions:[IconButton(onPressed:(){},icon:const Icon(Icons.notifications_none_rounded,size:28))],
+        flexibleSpace:Stack(fit:StackFit.expand,children:[const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF003B91),Color(0xFF0879D5)]))),const Align(alignment:Alignment.centerLeft,child:Opacity(opacity:.18,child:Text('🐄',style:TextStyle(fontSize:40)))),const Align(alignment:Alignment.centerRight,child:Opacity(opacity:.18,child:Text('🥛',style:TextStyle(fontSize:36))))]),
+      )),
+      body:tab==0?home():Center(child:Text(tr(widget.language,labels[tab]),style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
+      bottomNavigationBar:NavigationBar(height:76,backgroundColor:Colors.white,indicatorColor:const Color(0xFFDCEBFF),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,destinations:[
+        NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:tr(widget.language,'home')),
+        NavigationDestination(icon:const Icon(Icons.people_outline),selectedIcon:const Icon(Icons.people),label:tr(widget.language,'accounts')),
+        NavigationDestination(icon:const Icon(Icons.bar_chart_rounded),label:tr(widget.language,'reports')),
+        NavigationDestination(icon:const Icon(Icons.settings_outlined),selectedIcon:const Icon(Icons.settings),label:tr(widget.language,'settings')),
+      ]),
+    ));
   }
-
-  Widget _home(String language) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      children: [
-        Container(
-          height: 72,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFFE2F8FF), Colors.white]),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF9EDCFF)),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.campaign, color: Color(0xFF0756C9)),
-              SizedBox(width: 8),
-              Text('Ad space', style: TextStyle(color: Color(0xFF0756C9), fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        Center(
-          child: Text(Copy.get(language, 'welcome'),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF082F72))),
-        ),
-        const SizedBox(height: 18),
-        _actionCard(language, 'milk', 'milkSub', Icons.local_drink, const Color(0xFF0875E1), const Color(0xFFDFF1FF)),
-        _actionCard(language, 'advance', 'advanceSub', Icons.monetization_on, const Color(0xFFE9A400), const Color(0xFFFFF4C9)),
-        _actionCard(language, 'accounts', 'accountsSub', Icons.receipt_long, const Color(0xFF079B37), const Color(0xFFE3F9E8)),
-      ],
-    );
-  }
-
-  Widget _actionCard(String language, String title, String subtitle, IconData icon, Color color, Color tint) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        onTap: () => _showMessage(language, Copy.get(language, title)),
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(18), border: Border.all(color: color)),
-          child: Row(
-            children: [
-              CircleAvatar(radius: 29, backgroundColor: color, child: Icon(icon, color: Colors.white, size: 30)),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(Copy.get(language, title), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Color(0xFF101820))),
-                    const SizedBox(height: 3),
-                    Text(Copy.get(language, subtitle), style: const TextStyle(fontSize: 14, color: Color(0xFF24364B))),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 32),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder(String language, String title) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.construction, size: 52, color: Color(0xFF0756C9)),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(Copy.get(language, 'coming'), textAlign: TextAlign.center),
-          ]),
-        ),
-      );
-
-  void _showMessage(String language, String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title — ${Copy.get(language, 'coming')}')),
-    );
-  }
-
-  void _openMenu(BuildContext context, String language) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.language), title: Text(language == 'ur' ? 'زبان تبدیل کریں' : 'Change language'), onTap: () {
-            Navigator.pop(sheetContext);
-            widget.onLanguageChanged(language == 'ur' ? 'en' : 'ur');
-          }),
-          ListTile(leading: const Icon(Icons.info_outline), title: const Text('Milk Account • Phase 1'), onTap: () => Navigator.pop(sheetContext)),
-        ]),
-      ),
-    );
-  }
+  Widget home()=>ListView(padding:const EdgeInsets.fromLTRB(15,12,15,12),children:[
+    Container(height:94,padding:const EdgeInsets.all(9),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFE7F8FF),Colors.white,Color(0xFFD9F0FF)]),border:Border.all(color:const Color(0xFF91CFFF),width:1.5),borderRadius:BorderRadius.circular(17)),child:Row(children:[const Icon(Icons.water_drop_rounded,color:Color(0xFF0875E1),size:48),const SizedBox(width:8),Expanded(child:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:2),decoration:BoxDecoration(color:const Color(0xFFFFD83D),borderRadius:BorderRadius.circular(5)),child:const Text('Ad',style:TextStyle(fontWeight:FontWeight.w900))),const SizedBox(width:6),Expanded(child:Text(tr(widget.language,'ad'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w900)))]),const SizedBox(height:5),Text(tr(widget.language,'adSub'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))])),const SizedBox(width:6),Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.info_outline,size:17),const SizedBox(height:5),Text(tr(widget.language,'learn'),style:const TextStyle(color:Color(0xFF0756C9),fontSize:10,fontWeight:FontWeight.bold))])])),
+    const SizedBox(height:18),
+    action('milk','milkSub',Icons.local_drink_rounded,const Color(0xFF0875E1),const Color(0xFFDFF1FF)),
+    action('advance','advanceSub',Icons.monetization_on_rounded,const Color(0xFFE2A000),const Color(0xFFFFF2C6)),
+    action('accounts','accountsSub',Icons.receipt_long_rounded,const Color(0xFF079B37),const Color(0xFFE0F8E8)),
+    Container(height:55,decoration:BoxDecoration(borderRadius:BorderRadius.circular(14),gradient:const LinearGradient(colors:[Color(0xFFBCEBFF),Color(0xFFE8FAFF),Color(0xFF9BDE9A)])),child:const Center(child:Icon(Icons.water_drop_rounded,color:Colors.white,size:38))),
+  ]);
+  Widget action(String title,String sub,IconData icon,Color color,Color tint)=>Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:tint,border:Border.all(color:color,width:1.6),borderRadius:BorderRadius.circular(23),boxShadow:const[BoxShadow(color:Color(0x16002D64),blurRadius:5,offset:Offset(0,3))]),child:InkWell(onTap:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${tr(widget.language,title)} — ${tr(widget.language,'later')}'))),borderRadius:BorderRadius.circular(23),child:Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:17),child:Row(children:[CircleAvatar(radius:30,backgroundColor:color,child:Icon(icon,color:Colors.white,size:33)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(tr(widget.language,title),style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Color(0xFF101820))),Text(tr(widget.language,sub),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:13,color:Color(0xFF24364B)))])),const Icon(Icons.chevron_right_rounded,size:34)]))));
+  void menu()=>showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[ListTile(leading:const Icon(Icons.language),title:Text(tr(widget.language,'language')),onTap:(){Navigator.pop(ctx);languagePicker();}),const ListTile(leading:Icon(Icons.info_outline),title:Text('Milk Account'),subtitle:Text('Milk Collection & Account Management App'))])));
+  void languagePicker()=>showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])ListTile(leading:Text(option.$2,style:const TextStyle(fontSize:24)),title:Text(option.$3),onTap:(){Navigator.pop(ctx);widget.onLanguage(option.$1);})])));
 }

@@ -2,18 +2,18 @@
 
 Offline-first dairy customer ledger app built with Flutter and Dart.
 
-## Phase 1: UI and project foundation
-This release establishes the app theme, Urdu/English first-launch language selection, the starter dashboard, bottom navigation, and automated CI checks. The approved Urdu roadmap screenshot is the visual source of truth for the layout and color direction.
+## Phase 2: Approved multilingual dashboard design
+This update aligns the starter dashboard with the user's approved three-language visual reference: deep blue branded header, compact advertisement banner, blue Milk Entry card, yellow Advance card, green Accounts card, and four-item bottom navigation. First-launch language selection and dashboard copy now support Urdu (Pakistan), English, and Hindi, with RTL direction for Urdu and LTR direction for English/Hindi.
 
-**Important:** Phase 1 is not yet a production accounting app. Customer data, ledger math, database persistence, backup/restore, and financial workflows are not implemented yet. Do not enter real customer or financial data.
+The action cards remain visual entry points. Customer records, milk transactions, advance accounting, database persistence, and financial workflows are not implemented in this design update. Do not enter real customer or financial data until those phases are completed and tested.
 
 ## Run locally
 1. Install Flutter stable.
-2. Run `bash tool/prepare_platforms.sh` once to generate any missing Android and Web platform folders.
+2. Run `bash tool/prepare_platforms.sh` to generate missing Android and Web platform folders.
 3. Run `flutter pub get`.
 4. Run `flutter run`.
 
 ## Validation
-GitHub Actions generates missing Android/Web platform scaffolding with the configured Flutter stable SDK, then runs Dart formatting, Flutter analysis, widget tests, Android release APK build, and Web release build on pushes to `main`. Generated platform files are created in the clean CI workspace; the script is version-controlled so the process is repeatable and does not rely on manually copied Gradle files.
+GitHub Actions generates missing Android/Web platform scaffolding, then runs Dart formatting, Flutter analysis, widget tests, Android release APK build, and Web release build on pushes to `main`.
 
-See [Phase 1 scope](docs/PHASE_1_SCOPE.md).
+See [Phase 2 visual scope](docs/PHASE_1_SCOPE.md).

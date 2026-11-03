@@ -1,23 +1,19 @@
-# Milk Account — Phase 1
+# Milk Account — Phase 2 visual alignment
 
-## Approved visual direction
-Use the supplied Urdu roadmap screenshot as the visual reference: dairy-blue gradient branding, white rounded cards, green confirmation/action accents, blue/yellow/green dashboard action cards, and a compact top advertisement reservation. Preserve the approved screen hierarchy and RTL alignment for Urdu.
+## Approved visual reference
+The user's latest three-language dashboard screenshot is the authoritative design reference. Preserve its structure and visual language: dairy-blue branded header, milk/cow theme, compact advertisement banner, three large action cards in blue/yellow/green, and bottom navigation with Home, Accounts, Reports, Settings.
 
-## Included in this foundation
-- Flutter/Dart application entry point and Material 3 theme.
-- First-launch language selection with Urdu (Pakistan) and English.
-- Persisted language choice; language can be changed from the menu.
-- Responsive starter dashboard with Milk Entry, Advance, and Accounts action cards.
-- Bottom navigation: Home, Accounts, Reports, Settings.
-- Reserved compact ad banner area; no interstitial or full-screen ads.
-- Reproducible Flutter platform bootstrap script for Android and Web.
-- GitHub Actions checks for formatting, analysis, tests, Android APK, and Web build.
+## Delivered in this update
+- Reworked the app header and brand treatment to a deep-blue dairy-themed presentation.
+- Reworked the ad placeholder to match the compact banner position and style in the reference. It remains a placeholder, not a live AdMob integration.
+- Reworked Milk Entry, Advance, and Accounts cards with the reference's blue, yellow, and green palette, rounded borders, icon badges, and chevrons.
+- Preserved the four destinations in bottom navigation.
+- Added Hindi to first-launch language selection and dashboard copy alongside Urdu and English.
+- Applied RTL direction for Urdu and LTR direction for English and Hindi.
+- Added widget coverage for all three language choices and Urdu/Hindi dashboard labels.
 
-## Platform generation
-The repository currently stores the Flutter application source, not generated Android or Web platform scaffolding. Before building, `tool/prepare_platforms.sh` runs `flutter create --platforms=android,web` using the same stable Flutter SDK as CI. This avoids hand-written or SDK-mismatched Gradle files and creates the required platform files in a clean checkout. Run the script locally once after installing Flutter, or let CI run it automatically.
+## Not included in this visual update
+The action cards remain placeholders. Customer database, customer create/edit flows, ledger calculations, milk entries, advance transactions, Naga days, rate management, backup/restore, exports, and production AdMob are not implemented here. These require separate data-model and workflow phases with dedicated tests.
 
-## Not yet implemented
-Customer records, ledger calculations, advances, milk transactions, Naga days, rate history, database migrations, backup/restore, data transfer, PDF/Excel exports, SMS/WhatsApp delivery, and production AdMob integration are deliberately deferred. They require dedicated data-model design and tests before storing real customer/accounting data.
-
-## Data safety statement
-This phase is a UI/architecture foundation only. It must not be used for real customer or financial records. No persistent accounting database is created in this phase.
+## Visual accuracy note
+This commit aligns the Flutter layout, hierarchy, and color palette with the approved reference, but it is not yet a pixel-perfect reproduction. The original standalone cow/logo/background artwork and font files were not supplied separately; current branding uses Flutter iconography and subtle emoji decoration, and Urdu/Hindi glyph appearance can vary by Android device. A final screenshot comparison on target Android sizes is still required before claiming exact visual parity.
