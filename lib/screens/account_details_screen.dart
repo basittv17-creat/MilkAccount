@@ -35,7 +35,18 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       case _ActivityRange.custom: return DateTime(_from.year, _from.month, _from.day);
     }
   }
-  DateTime get _end => _range == _ActivityRange.all ? DateTime.now() : DateTime(_to.year, _to.month, _to.day);
+  DateTime get _end {
+    switch (_range) {
+      case _ActivityRange.month:
+        return DateTime(_month.year, _month.month + 1, 0);
+      case _ActivityRange.last15Days:
+      case _ActivityRange.custom:
+        return DateTime(_to.year, _to.month, _to.day);
+      case _ActivityRange.all:
+        final now = DateTime.now();
+        return DateTime(now.year, now.month, now.day);
+    }
+  }
   Map<String, Object?>? _accountValue;
 
   @override
@@ -55,7 +66,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     return _activity.load(accountId: widget.accountId, startDay: start, endDay: _end);
   }
 
-  void _refresh() => setState(() => _records = _load());
+  void _refresh() => _records = _load();
 
   Future<void> _edit(Map<String, Object?> account) async {
     final saved = await Navigator.push<bool>(context, MaterialPageRoute(
