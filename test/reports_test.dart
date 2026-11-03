@@ -50,7 +50,8 @@ void main() {
     await AppDatabase.instance.close();
   });
   test('monthly report uses device-local month and local calendar days', () async {
-    const year = 2097;
+    // Use a year not shared with other test suites because the FFI database is shared.
+    const year = 2096;
     const month = 12;
     await AccountRepository().createAccount(
       customerName: 'Local Time Report Boundary',
@@ -81,7 +82,7 @@ void main() {
     expect(summary['milk_quantity_grams'], 1000);
     final daily = await ReportsRepository().dailyTotals(DateTime(year, month));
     expect(daily, hasLength(1));
-    expect(daily.single['day'], '2097-12-31');
+    expect(daily.single['day'], '2096-12-31');
     await AppDatabase.instance.close();
   });
 }
