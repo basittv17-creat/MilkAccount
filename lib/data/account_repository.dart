@@ -62,8 +62,20 @@ class AccountRepository {
     if (name.isEmpty) throw ArgumentError.value(customerName, 'customerName', 'Name is required');
     if (milkRatePaisa < 0) throw ArgumentError.value(milkRatePaisa, 'milkRatePaisa', 'Rate cannot be negative');
     final phone = phoneNumber.trim();
-    final normalized = phone.replaceAll(RegExp(r'[\\s()-]'), '');
-    if (phone.isNotEmpty && !RegExp(r'^\\+?[0-9]{7,15}$').hasMatch(normalized)) {
+    final normalized = phone.replaceAll(RegExp(r'[\s()-]'), '');
+    if (phone.isNotEmpty && !RegExp(r'^\+?[0-9]{7,15}).hasMatch(normalized)) {
+      throw ArgumentError.value(phoneNumber, 'phoneNumber', 'Invalid phone number');
+    }
+    return {
+      'customer_name': name, 'father_name': fatherName.trim(),
+      'country_code': countryCode.trim().isEmpty ? '+92' : countryCode.trim(),
+      'phone_number': phone, 'start_at': startAt.toUtc().toIso8601String(),
+      'milk_rate_paisa': milkRatePaisa, 'fat_enabled': fatEnabled ? 1 : 0,
+      'notes': notes.trim(),
+    };
+  }
+}
+).hasMatch(normalized)) {
       throw ArgumentError.value(phoneNumber, 'phoneNumber', 'Invalid phone number');
     }
     return {
