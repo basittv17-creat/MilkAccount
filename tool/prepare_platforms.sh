@@ -12,3 +12,15 @@ if [[ ! -d android || ! -f web/index.html ]]; then
 else
   echo "Android and Web platform folders already exist; leaving them unchanged."
 fi
+
+# Keep the generated app compatible with Android plugins that require API 36.
+# compileSdk is a build-time setting; minSdk/targetSdk remain unchanged.
+APP_GRADLE="android/app/build.gradle.kts"
+if [[ -f "$APP_GRADLE" ]]; then
+  if grep -q 'compileSdk = flutter.compileSdkVersion' "$APP_GRADLE"; then
+    sed -i 's/compileSdk = flutter\.compileSdkVersion/compileSdk = 36/' "$APP_GRADLE"
+  elif ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
+    echo "Could not safely set Android compileSdk to 36 in $APP_GRADLE" >&2
+    exit 1
+  fi
+fi
