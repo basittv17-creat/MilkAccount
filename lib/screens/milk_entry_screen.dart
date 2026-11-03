@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/milk_entry_repository.dart';
 
 class MilkEntryScreen extends StatefulWidget {
@@ -105,24 +106,115 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
     }
     setState(() => _saving = true);
     try {
+      final quantityGrams = (kg * 1000).round();
+      final ratePaisa = account['milk_rate_paisa'] as int? ?? 0;
+      final totalPaisa = (quantityGrams * ratePaisa / 1000).round();
+      final note = _note.text.trim();
       await _repo.createEntry(
         accountId: account['id'] as String,
         recordedAt: _recordedAt,
-        quantityGrams: (kg * 1000).round(),
+        quantityGrams: quantityGrams,
         fatValue: fat,
-        ratePaisaPerKg: account['milk_rate_paisa'] as int? ?? 0,
-        note: _note.text,
+        ratePaisaPerKg: ratePaisa,
+        note: note,
       );
+      final message = _milkMessage(account: account, quantityGrams: quantityGrams,
+        ratePaisa: ratePaisa, totalPaisa: totalPaisa, fat: fat, note: note);
       await _loadAccounts();
       if (mounted) {
         setState(() => _selected = null);
         _message(t('آج کا دودھ وصول (اندراج ہو گیا)', 'Today’s milk entry saved', 'आज का दूध दर्ज हो गया'));
+        if (_sendSms || _sendWhatsApp) await _showShareOptions(account, message);
       }
     } catch (error) {
       _message('${t('اندراج محفوظ نہیں ہو سکا', 'Could not save entry', 'एंट्री सेव नहीं हुई')}: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _milkMessage({
+    required Map<String, Object?> account,
+    required int quantityGrams,
+    required int ratePaisa,
+    required int totalPaisa,
+    required double? fat,
+    required String note,
+  }) {
+    final date = _dateLabel(_recordedAt);
+    final time = TimeOfDay.fromDateTime(_recordedAt).format(context);
+    final quantity = (quantityGrams / 1000).toStringAsFixed(3);
+    final customerName = account['customer_name'] ?? '';
+    final accountNumber = account['account_number'] ?? '';
+    final lines = <String>[
+      'Milk Account / ' + t('دودھ کا کھاتہ', 'Milk Account', 'दूध का खाता'),
+      t('گاہک', 'Customer', 'ग्राहक') + ': $customerName',
+      t('کھاتہ نمبر', 'Account No.', 'खाता नंबर') + ': $accountNumber',
+      t('تاریخ', 'Date', 'तारीख') + ': $date',
+      t('وقت', 'Time', 'समय') + ': $time',
+      t('دودھ', 'Milk', 'दूध') + ': $quantity kg',
+      if (fat != null) 'FAT: ' + fat.toStringAsFixed(1) + '%',
+      t('ریٹ فی کلو', 'Rate per kg', 'प्रति किलो रेट') + ': Rs. ' + (ratePaisa / 100).toStringAsFixed(2),
+      t('کل رقم', 'Total amount', 'कुल राशि') + ': Rs. ' + (totalPaisa / 100).toStringAsFixed(2),
+      if (note.isNotEmpty) t('نوٹ', 'Note', 'नोट') + ': $note',
+    ];
+    return lines.join('\n');
+  }
+
+  String? _customerPhone(Map<String, Object?> account) {
+    final phone = (account['phone_number'] as String? ?? '').replaceAll(RegExp(r'\D'), '');
+    final country = (account['country_code'] as String? ?? '').replaceAll(RegExp(r'\D'), '');
+    if (phone.isEmpty) return null;
+    return phone.startsWith(country) ? phone : '$country$phone';
+  }
+
+  Future<void> _showShareOptions(Map<String, Object?> account, String message) async {
+    final phone = _customerPhone(account);
+    if (phone == null || phone.isEmpty) {
+      _message(t('گاہک کا فون نمبر درج نہیں ہے', 'Customer phone number is missing', 'ग्राहक का फोन नंबर दर्ज नहीं है'));
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(t('دودھ کی تفصیل بھیجیں', 'Send milk details', 'दूध की जानकारी भेजें'),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            ),
+            if (_sendWhatsApp)
+              ListTile(
+                leading: const Icon(Icons.chat, color: Color(0xFF159447)),
+                title: const Text('WhatsApp'),
+                subtitle: Text('+$phone'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final uri = Uri.parse('https://wa.me/$phone?text=' + Uri.encodeComponent(message));
+                  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (!opened && mounted) _message(t('WhatsApp نہیں کھل سکا', 'Could not open WhatsApp', 'WhatsApp नहीं खुल सका'));
+                },
+              ),
+            if (_sendSms)
+              ListTile(
+                leading: const Icon(Icons.sms, color: Color(0xFF0756C9)),
+                title: const Text('SMS'),
+                subtitle: Text('+$phone'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final uri = Uri(scheme: 'sms', path: '+$phone', queryParameters: {'body': message});
+                  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (!opened && mounted) _message(t('SMS ایپ نہیں کھل سکی', 'Could not open SMS app', 'SMS ऐप नहीं खुल सकी'));
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));

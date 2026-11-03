@@ -119,7 +119,6 @@ class _DashboardState extends State<Dashboard> {
   }
   @override
   Widget build(BuildContext context) {
-    final labels=['home','accounts','reports','settings'];
     return Directionality(textDirection:rtl?TextDirection.rtl:TextDirection.ltr,child:Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(),
