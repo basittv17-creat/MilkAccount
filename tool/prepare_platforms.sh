@@ -31,6 +31,18 @@ if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.SEND_SMS' "$MANIFEST"; 
   sed -i '/<application/i\\    <uses-permission android:name="android.permission.SEND_SMS" />\\n    <uses-feature android:name="android.hardware.telephony" android:required="false" />' "$MANIFEST"
 fi
 
+# Keep legacy Android Gradle DSL enabled for plugins that still cast Android
+# source sets to the legacy AndroidLibrarySourceSet API (telephony_sms 0.1.0).
+# Flutter's newer Android DSL otherwise causes a ClassCastException in that plugin.
+GRADLE_PROPERTIES="android/gradle.properties"
+if [[ -f "$GRADLE_PROPERTIES" ]]; then
+  grep -q '^android.newDsl=' "$GRADLE_PROPERTIES" || printf '\\nandroid.newDsl=false\\n' >> "$GRADLE_PROPERTIES"
+  grep -q '^android.builtInKotlin=' "$GRADLE_PROPERTIES" || printf 'android.builtInKotlin=false\\n' >> "$GRADLE_PROPERTIES"
+else
+  echo "Missing generated Gradle properties file: $GRADLE_PROPERTIES" >&2
+  exit 1
+fi
+
 # Fail early if the generated application Gradle file did not receive API 36.
 if [[ ! -f "$APP_GRADLE" ]] || ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
   echo "Android app compileSdk must be 36; generated configuration is not correct." >&2
