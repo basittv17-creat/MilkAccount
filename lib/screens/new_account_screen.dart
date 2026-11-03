@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:country_picker/country_picker.dart';
 import '../data/account_repository.dart';
 
 class NewAccountScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
   final _repo = AccountRepository();
   DateTime _start = DateTime.now();
   bool _fat = false, _saving = false;
+  String _selectedFlag = '🇵🇰';
   bool get _ur => widget.language == 'ur';
   bool get _editing => widget.account != null;
   String t(String u, String e, String h) => _ur ? u : widget.language == 'hi' ? h : e;
@@ -38,6 +40,8 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
       _fat = (a['fat_enabled'] as int? ?? 0) == 1;
       _start = DateTime.tryParse(a['start_at']?.toString() ?? '')?.toLocal() ?? DateTime.now();
     }
+    final initialCountry = CountryService().findByPhoneCode(_code.text.replaceAll('+', ''));
+    _selectedFlag = initialCountry?.flagEmoji ?? '🇵🇰';
   }
 
   @override
@@ -65,6 +69,58 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
     final v = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_start));
     if (v != null && mounted) setState(() => _start = DateTime(_start.year,_start.month,_start.day,v.hour,v.minute));
   }
+
+  void _pickCountry() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: true,
+      favorite: const ['PK', 'SA', 'AE', 'GB', 'US', 'IN'],
+      countryListTheme: CountryListThemeData(
+        backgroundColor: Colors.white,
+        flagSize: 26,
+        textStyle: const TextStyle(fontSize: 16, color: Color(0xFF173D67)),
+        bottomSheetHeight: 560,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        inputDecoration: InputDecoration(
+          hintText: t('ملک یا کوڈ تلاش کریں', 'Search country or code', 'देश या कोड खोजें'),
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: const Color(0xFFF3F9FF),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      onSelect: (country) {
+        setState(() {
+          _code.text = '+${country.phoneCode}';
+          _selectedFlag = country.flagEmoji;
+        });
+      },
+    );
+  }
+
+  Widget _countryCodeField() => InkWell(
+    onTap: _pickCountry,
+    borderRadius: BorderRadius.circular(12),
+    child: InputDecorator(
+      decoration: dec(t('ملک کا کوڈ', 'Country code', 'देश कोड')),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(children: [
+                Text(_selectedFlag, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 5),
+                Text(_code.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+          const Icon(Icons.arrow_drop_down),
+        ],
+      ),
+    ),
+  );
 
   Future<void> save() async {
     if (!_key.currentState!.validate()) return;
@@ -107,7 +163,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
         field(_father,t('والد کا نام','Father name','पिता का नाम')), const SizedBox(height:12),
         Text(t('فون نمبر','Phone number','फ़ोन नंबर')),
         Row(children:[
-          SizedBox(width:100,child:TextFormField(controller:_code,decoration:dec(t('کوڈ','Code','कोड')))),
+          SizedBox(width:124,child:_countryCodeField()),
           const SizedBox(width:8),
           Expanded(child:TextFormField(controller:_phone,keyboardType:TextInputType.phone,decoration:dec(t('موبائل نمبر','Mobile number','मोबाइल नंबर')))),
         ]),
