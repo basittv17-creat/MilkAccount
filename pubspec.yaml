@@ -1,7 +1,7 @@
 name: milk_account
 description: Offline-first dairy customer ledger app.
 publish_to: "none"
-version: 0.2.0+2
+version: 0.3.0+3
 environment:
   sdk: ">=3.4.0 <4.0.0"
 dependencies:
@@ -10,9 +10,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.5.3
+  sqflite: ^2.4.2
+  path: ^1.9.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.4
 flutter:
   uses-material-design: true
