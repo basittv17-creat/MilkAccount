@@ -42,5 +42,4 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
       field(_notes,t('اضافی نوٹس (اختیاری)','Additional notes','अतिरिक्त नोट्स'),lines:3),const SizedBox(height:20),
       SizedBox(height:52,child:FilledButton.icon(onPressed:_saving?null:save,icon:const Icon(Icons.save),label:Text(_saving?t('محفوظ ہو رہا ہے','Saving...','सेव हो रहा है'):t('کھاتہ محفوظ کریں','Save Account','खाता सेव करें')),style:FilledButton.styleFrom(backgroundColor:const Color(0xFF079B37),foregroundColor:Colors.white))),
     ]))));
-  }
 }
