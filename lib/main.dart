@@ -137,17 +137,15 @@ class _DashboardState extends State<Dashboard> {
           boxShadow: const [BoxShadow(color: Color(0x14004A91), blurRadius: 7, offset: Offset(0, 3))],
         ),
         child: Row(children: [
-          Container(
-            width: 67,
-            height: 67,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF0879D5), Color(0xFF003B91)]),
-              borderRadius: BorderRadius.all(Radius.circular(13)),
+          ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(13)),
+            child: Image.asset(
+              'assets/images/milk_account_dairy_hero.jpg',
+              width: 112,
+              height: 76,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.local_drink_rounded, color: Color(0xFF0875E1), size: 48),
             ),
-            child: const Stack(alignment: Alignment.center, children: [
-              Icon(Icons.local_drink_rounded, color: Colors.white, size: 43),
-              Positioned(right: 3, top: 3, child: Icon(Icons.auto_awesome, color: Color(0xFFFFD83D), size: 15)),
-            ]),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(

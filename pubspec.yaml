@@ -28,3 +28,5 @@ dev_dependencies:
   sqflite_common_ffi: ^2.3.4
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/milk_account_dairy_hero.jpg
