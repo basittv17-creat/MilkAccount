@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:telephony_sms/telephony_sms.dart';
 import '../data/no_milk_repository.dart';
+import '../utils/phone_number.dart';
 
 class NoMilkScreen extends StatefulWidget {
   const NoMilkScreen({super.key, required this.language});
@@ -48,22 +49,26 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   }
 
   String _phone(Map<String, Object?> row) {
-    final code = (row['country_code'] as String? ?? '+92').replaceAll(RegExp(r'[^0-9+]'), '');
-    final number = (row['phone_number'] as String? ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-    if (number.isEmpty) return '';
-    if (number.startsWith('0')) return '$code${number.substring(1)}';
-    if (number.startsWith('92')) return '+$number';
-    return '$code$number';
+    final digits = normalizeInternationalPhone(
+      countryCode: row['country_code']?.toString(),
+      phoneNumber: row['phone_number']?.toString(),
+    );
+    return digits == null ? '' : '+$digits';
   }
 
   String get _recordedTime =>
       '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}';
 
-  String _nagaMessage(Map<String, Object?> row) => t(
-    'محترم ${row['customer_name']}، ${_day.day}/${_day.month}/${_day.year} کو دودھ نہیں آیا، اس لیے آج ناگا درج کیا گیا۔',
-    'Dear ${row['customer_name']}, no milk was received on ${_day.day}/${_day.month}/${_day.year}. A no-milk day has been recorded.',
-    'प्रिय ${row['customer_name']}, ${_day.day}/${_day.month}/${_day.year} को दूध नहीं आया, इसलिए नागा दर्ज किया गया।',
-  );
+  String _nagaMessage(Map<String, Object?> row) {
+    final date = '${_day.day}/${_day.month}/${_day.year}';
+    final time = _time.format(context);
+    final note = _note.text.trim();
+    return t(
+      'محترم ${row['customer_name']}، تاریخ $date کو وقت $time پر دودھ نہیں آیا، اس لیے ناگا درج کیا گیا.${note.isEmpty ? '' : '\nنوٹ: $note'}',
+      'Dear ${row['customer_name']}, no milk was received on $date at $time, so a no-milk day has been recorded.${note.isEmpty ? '' : '\nNote: $note'}',
+      'प्रिय ${row['customer_name']}, $date को $time बजे दूध नहीं आया, इसलिए नागा दर्ज किया गया।${note.isEmpty ? '' : '\nनोट: $note'}',
+    );
+  }
 
   Future<void> _sendNotifications(List<Map<String, Object?>> savedRows) async {
     if (!_sendSms && !_sendWhatsApp) return;
@@ -87,13 +92,23 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
     }
     if (_sendWhatsApp) {
       for (final row in savedRows) {
-        final phone = _phone(row).replaceAll(RegExp(r'[^0-9]'), '');
-        if (phone.isEmpty) { errors.add('${row['customer_name']}: ${t('فون نمبر موجود نہیں', 'No phone number', 'फोन नंबर नहीं है')}'); continue; }
+        final phone = normalizeInternationalPhone(
+          countryCode: row['country_code']?.toString(),
+          phoneNumber: row['phone_number']?.toString(),
+        );
+        if (phone == null) {
+          errors.add('${row['customer_name']}: ${t('درست فون نمبر موجود نہیں', 'No valid phone number', 'मान्य फोन नंबर नहीं है')}');
+          continue;
+        }
         final uri = Uri.https('wa.me', '/$phone', {'text': _nagaMessage(row)});
         try {
           final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-          if (!opened) errors.add('${row['customer_name']}: WhatsApp could not be opened');
-          if (savedRows.length > 1) await Future<void>.delayed(const Duration(seconds: 2));
+          if (!opened) {
+            errors.add('${row['customer_name']}: ${t('WhatsApp نہیں کھل سکا، ایپ انسٹال یا اپ ڈیٹ چیک کریں', 'WhatsApp could not be opened; check that it is installed and updated', 'WhatsApp नहीं खुला; ऐप इंस्टॉल या अपडेट जाँचें')}');
+          }
+          if (savedRows.length > 1) {
+            await Future<void>.delayed(const Duration(seconds: 2));
+          }
         } catch (error) { errors.add('${row['customer_name']}: WhatsApp $error'); }
       }
     }
