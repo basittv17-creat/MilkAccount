@@ -44,4 +44,37 @@ void main() {
       accountId: 'missing', recordedAt: DateTime.now(),
       quantityGrams: 0, ratePaisaPerKg: 10000), throwsArgumentError);
   });
+
+  test('accountsForDate separates accounts with and without a daily entry', () async {
+    final accounts = AccountRepository();
+    await accounts.createAccount(
+      customerName: 'Daily Status Test',
+      phoneNumber: '3001234567',
+      startAt: DateTime(2026, 11, 3),
+      milkRatePaisa: 25000,
+    );
+    final db = await AppDatabase.instance.database;
+    final account = (await db.query(
+      'accounts',
+      where: 'customer_name = ?',
+      whereArgs: ['Daily Status Test'],
+    )).single;
+
+    final repository = MilkEntryRepository();
+    final before = await repository.accountsForDate(DateTime(2026, 11, 3));
+    final beforeRow = before.singleWhere((row) => row['id'] == account['id']);
+    expect(beforeRow['has_entry'], 0);
+
+    await repository.createEntry(
+      accountId: account['id'] as String,
+      recordedAt: DateTime(2026, 11, 3, 7, 42),
+      quantityGrams: 20000,
+      ratePaisaPerKg: 25000,
+    );
+    final after = await repository.accountsForDate(DateTime(2026, 11, 3));
+    final afterRow = after.singleWhere((row) => row['id'] == account['id']);
+    expect(afterRow['has_entry'], 1);
+    await AppDatabase.instance.close();
+  });
+
 }

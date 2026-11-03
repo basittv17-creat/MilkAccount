@@ -10,200 +10,269 @@ class MilkEntryScreen extends StatefulWidget {
 
 class _MilkEntryScreenState extends State<MilkEntryScreen> {
   final _repo = MilkEntryRepository();
+  final _search = TextEditingController();
   final _quantity = TextEditingController();
   final _fat = TextEditingController();
   final _note = TextEditingController();
-  late Future<List<Map<String, Object?>>> _accounts;
-  String? _accountId;
+  DateTime _date = DateTime.now();
   DateTime _recordedAt = DateTime.now();
+  List<Map<String, Object?>> _accounts = [];
+  Map<String, Object?>? _selected;
+  bool _loading = true;
   bool _saving = false;
+  bool _sendSms = true;
+  bool _sendWhatsApp = true;
+
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) => _ur ? u : widget.language == 'hi' ? h : e;
+  List<Map<String, Object?>> get _filtered {
+    final q = _search.text.trim().toLowerCase();
+    if (q.isEmpty) return _accounts;
+    return _accounts.where((a) =>
+      (a['customer_name'] as String).toLowerCase().contains(q) ||
+      '${a['account_number']}'.contains(q)).toList();
+  }
+  List<Map<String, Object?>> get _pending => _filtered.where((a) => a['has_entry'] != 1).toList();
+  List<Map<String, Object?>> get _received => _filtered.where((a) => a['has_entry'] == 1).toList();
 
   @override
   void initState() {
     super.initState();
-    _accounts = _repo.activeAccounts();
+    _loadAccounts();
+    _search.addListener(() { if (mounted) setState(() {}); });
   }
 
   @override
   void dispose() {
+    _search.dispose();
     _quantity.dispose();
     _fat.dispose();
     _note.dispose();
     super.dispose();
   }
 
-  Map<String, Object?>? get _selected {
-    final rows = _accountsValue;
-    for (final row in rows) {
-      if (row['id'] == _accountId) return row;
+  Future<void> _loadAccounts() async {
+    setState(() => _loading = true);
+    try {
+      final rows = await _repo.accountsForDate(_date);
+      if (mounted) setState(() { _accounts = rows; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+      rethrow;
     }
-    return null;
   }
 
-  List<Map<String, Object?>> _accountsValue = [];
-
   Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context, initialDate: _recordedAt,
+    final value = await showDatePicker(
+      context: context, initialDate: _date,
       firstDate: DateTime(2000), lastDate: DateTime(2100));
-    if (date != null && mounted) {
-      setState(() => _recordedAt = DateTime(
-        date.year, date.month, date.day, _recordedAt.hour, _recordedAt.minute));
+    if (value != null && mounted) {
+      setState(() { _date = value; _recordedAt = DateTime(value.year, value.month, value.day, _recordedAt.hour, _recordedAt.minute); _selected = null; });
+      await _loadAccounts();
     }
   }
 
   Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context, initialTime: TimeOfDay.fromDateTime(_recordedAt));
-    if (time != null && mounted) {
-      setState(() => _recordedAt = DateTime(
-        _recordedAt.year, _recordedAt.month, _recordedAt.day,
-        time.hour, time.minute));
+    final value = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_recordedAt));
+    if (value != null && mounted) {
+      setState(() => _recordedAt = DateTime(_date.year, _date.month, _date.day, value.hour, value.minute));
     }
+  }
+
+  void _openAccount(Map<String, Object?> account) {
+    setState(() {
+      _selected = account;
+      _quantity.clear();
+      _fat.text = (account['fat_enabled'] as int? ?? 0) == 1 ? '4.5' : '';
+      _note.clear();
+      _recordedAt = DateTime(_date.year, _date.month, _date.day, DateTime.now().hour, DateTime.now().minute);
+    });
   }
 
   Future<void> _save() async {
     final account = _selected;
     final kg = double.tryParse(_quantity.text.trim());
-    if (account == null || kg == null || !kg.isFinite || kg <= 0) {
-      _message(t('کھاتہ منتخب کریں اور دودھ کی مقدار درست درج کریں',
-        'Select an account and enter a valid milk quantity',
-        'खाता चुनें और दूध की सही मात्रा दर्ज करें'));
+    if (account == null || kg == null || !kg.isFinite || kg <= 0 || kg > 1000) {
+      _message(t('دودھ کی درست مقدار درج کریں', 'Enter a valid milk quantity', 'दूध की सही मात्रा दर्ज करें'));
       return;
     }
     final fatEnabled = (account['fat_enabled'] as int? ?? 0) == 1;
-    final fat = fatEnabled && _fat.text.trim().isNotEmpty
-        ? double.tryParse(_fat.text.trim()) : null;
-    if (fatEnabled && _fat.text.trim().isNotEmpty &&
-        (fat == null || !fat.isFinite || fat < 0 || fat > 15)) {
-      _message(t('FAT کی مقدار 0 سے 15 کے درمیان درج کریں',
-        'FAT must be between 0 and 15', 'FAT 0 से 15 के बीच दर्ज करें'));
+    final fat = fatEnabled && _fat.text.trim().isNotEmpty ? double.tryParse(_fat.text.trim()) : null;
+    if (fatEnabled && _fat.text.trim().isNotEmpty && (fat == null || !fat.isFinite || fat < 0 || fat > 15)) {
+      _message(t('FAT کی مقدار 0 سے 15 کے درمیان درج کریں', 'FAT must be between 0 and 15', 'FAT 0 से 15 के बीच दर्ज करें'));
       return;
     }
     setState(() => _saving = true);
     try {
       await _repo.createEntry(
-        accountId: _accountId!,
+        accountId: account['id'] as String,
         recordedAt: _recordedAt,
         quantityGrams: (kg * 1000).round(),
         fatValue: fat,
         ratePaisaPerKg: account['milk_rate_paisa'] as int? ?? 0,
         note: _note.text,
       );
+      await _loadAccounts();
       if (mounted) {
-        _quantity.clear();
-        _fat.clear();
-        _note.clear();
-        _message(t('دودھ کا اندراج محفوظ ہو گیا',
-          'Milk entry saved successfully', 'दूध की एंट्री सेव हो गई'));
+        setState(() => _selected = null);
+        _message(t('آج کا دودھ وصول (اندراج ہو گیا)', 'Today’s milk entry saved', 'आज का दूध दर्ज हो गया'));
       }
     } catch (error) {
-      _message('Could not save: $error');
+      _message('${t('اندراج محفوظ نہیں ہو سکا', 'Could not save entry', 'एंट्री सेव नहीं हुई')}: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  void _message(String value) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
-  }
+  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
 
-  InputDecoration _dec(String label) => InputDecoration(
-    labelText: label, filled: true, fillColor: Colors.white,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)));
+  String _dateLabel(DateTime d) => '${d.day.toString().padLeft(2, '0')} / ${d.month.toString().padLeft(2, '0')} / ${d.year}';
+  String _money(Object? paisa) => ((paisa as int? ?? 0) / 100).toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
     child: Scaffold(
-      backgroundColor: const Color(0xFFF3F9FF),
+      backgroundColor: const Color(0xFFEAF5FF),
       appBar: AppBar(
-        title: Text(t('روزانہ دودھ کا اندراج', 'Daily Milk Entry', 'रोज़ाना दूध की एंट्री')),
-        backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
-      body: FutureBuilder<List<Map<String, Object?>>>(
-        future: _accounts,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text(t('کھاتے لوڈ نہیں ہو سکے',
-              'Could not load accounts', 'खाते लोड नहीं हो सके')));
-          }
-          _accountsValue = snapshot.data ?? [];
-          if (_accountsValue.isEmpty) {
-            return Center(child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(t('پہلے ایک نیا کھاتہ بنائیں',
-                'Create an account before entering milk',
-                'दूध दर्ज करने से पहले खाता बनाएँ'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))));
-          }
-          if (_accountId == null ||
-              !_accountsValue.any((a) => a['id'] == _accountId)) {
-            _accountId = _accountsValue.first['id'] as String;
-          }
-          final account = _selected!;
-          final ratePaisa = account['milk_rate_paisa'] as int? ?? 0;
-          final rate = (ratePaisa / 100).toStringAsFixed(2);
-          final fatEnabled = (account['fat_enabled'] as int? ?? 0) == 1;
-          return ListView(padding: const EdgeInsets.all(16), children: [
-            DropdownButtonFormField<String>(
-              value: _accountId,
-              decoration: _dec(t('گاہک کا کھاتہ', 'Customer account', 'ग्राहक खाता')),
-              items: _accountsValue.map((a) => DropdownMenuItem(
-                value: a['id'] as String,
-                child: Text('#${a['account_number']} — ${a['customer_name']}'))).toList(),
-              onChanged: (value) => setState(() => _accountId = value)),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFD6E8F8))),
-              child: Row(children: [
-                Expanded(child: Text(t('دودھ کا ریٹ فی کلو', 'Milk rate per kg', 'दूध का रेट प्रति किलो'))),
-                Text('Rs. $rate', style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold,
-                  color: Color(0xFF087B32))),
-              ])),
-            const SizedBox(height: 14),
-            TextFormField(controller: _quantity,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: _dec(t('دودھ کی مقدار (کلو)', 'Milk quantity (kg)', 'दूध की मात्रा (kg)'))),
-            if (fatEnabled) ...[
-              const SizedBox(height: 14),
-              TextFormField(controller: _fat,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: _dec('FAT (%)')),
-            ],
-            const SizedBox(height: 14),
-            Text(t('تاریخ اور وقت', 'Date and time', 'तारीख और समय'),
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(
-                onPressed: _pickDate, icon: const Icon(Icons.calendar_month),
-                label: Text('${_recordedAt.day}/${_recordedAt.month}/${_recordedAt.year}'))),
-              const SizedBox(width: 8),
-              Expanded(child: OutlinedButton.icon(
-                onPressed: _pickTime, icon: const Icon(Icons.access_time),
-                label: Text(TimeOfDay.fromDateTime(_recordedAt).format(context)))),
-            ]),
-            const SizedBox(height: 14),
-            TextFormField(controller: _note, maxLines: 2,
-              decoration: _dec(t('نوٹس (اختیاری)', 'Notes (optional)', 'नोट्स (वैकल्पिक)'))),
-            const SizedBox(height: 20),
-            SizedBox(height: 52, child: FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: const Icon(Icons.save),
-              label: Text(_saving ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है')
-                : t('دودھ محفوظ کریں', 'Save Milk Entry', 'दूध सेव करें')),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF079B37),
-                foregroundColor: Colors.white))),
-          ]);
+        backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () {
+          if (_selected != null) { setState(() => _selected = null); } else { Navigator.maybePop(context); }
         }),
-    ));
+        title: Text(_selected == null
+          ? t('دودھ کا اندراج', 'Milk Entry', 'दूध की एंट्री')
+          : t('آج کا دودھ درج کریں', 'Enter Today’s Milk', 'आज का दूध दर्ज करें')),
+      ),
+      body: _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _accounts.isEmpty
+          ? Center(child: Text(t('پہلے نیا کھاتہ بنائیں', 'Create an account first', 'पहले खाता बनाएँ')))
+          : _selected == null ? _listView() : _entryView(_selected!),
+    ),
+  );
+
+  Widget _listView() => ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 22), children: [
+    _datePicker(),
+    const SizedBox(height: 10),
+    TextField(controller: _search, decoration: InputDecoration(
+      hintText: t('نام یا کھاتہ نمبر تلاش کریں...', 'Search name or account number...', 'नाम या खाता नंबर खोजें...'),
+      prefixIcon: const Icon(Icons.search), filled: true, fillColor: Colors.white,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+    const SizedBox(height: 10),
+    Row(children: [
+      Expanded(child: _countCard(t('دودھ وصول (اندراج)', 'Milk received', 'दूध प्राप्त'), _received.length, const Color(0xFF159447))),
+      const SizedBox(width: 8),
+      Expanded(child: _countCard(t('باقی کھاتے (دودھ نہیں آیا)', 'Pending (not entered)', 'बाकी खाते'), _pending.length, const Color(0xFF1453A5))),
+    ]),
+    const SizedBox(height: 12),
+    if (_pending.isNotEmpty) ...[
+      _sectionTitle(t('آج کا دودھ درج کریں', 'Enter today’s milk', 'आज का दूध दर्ज करें'), _pending.length, const Color(0xFFBFE0FF)),
+      for (final account in _pending) _accountTile(account, received: false),
+    ],
+    if (_received.isNotEmpty) ...[
+      const SizedBox(height: 8),
+      _sectionTitle(t('آج کا دودھ وصول (اندراج ہو چکا)', 'Milk received (already entered)', 'दूध दर्ज हो चुका'), _received.length, const Color(0xFFCFF2D8)),
+      for (final account in _received) _accountTile(account, received: true),
+    ],
+    if (_filtered.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Text(
+      t('کوئی کھاتہ نہیں ملا', 'No matching account found', 'कोई खाता नहीं मिला'), textAlign: TextAlign.center)),
+  ]);
+
+  Widget _datePicker() => InkWell(onTap: _pickDate, borderRadius: BorderRadius.circular(14), child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF9BCDF3))),
+    child: Row(children: [
+      const Icon(Icons.calendar_month, color: Color(0xFF0649AE), size: 28),
+      const SizedBox(width: 12),
+      Expanded(child: Text('${t('آج کی تاریخ', 'Date', 'तारीख')}: ${_dateLabel(_date)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+      const Icon(Icons.edit_calendar, color: Color(0xFF0649AE)),
+    ]),
+  ));
+
+  Widget _countCard(String title, int count, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(13)),
+    child: Row(children: [
+      Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
+      CircleAvatar(radius: 15, backgroundColor: Colors.white, child: Text('$count', style: TextStyle(color: color, fontWeight: FontWeight.w900))),
+    ]),
+  );
+
+  Widget _sectionTitle(String title, int count, Color color) => Container(
+    margin: const EdgeInsets.only(bottom: 7), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF9DBFE0))),
+    child: Row(children: [Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w900))), Text('$count', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))]),
+  );
+
+  Widget _accountTile(Map<String, Object?> a, {required bool received}) {
+    final color = received ? const Color(0xFFE0F7E7) : const Color(0xFFFFE6E8);
+    return Card(
+      elevation: 0, color: color, margin: const EdgeInsets.only(bottom: 7),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: received ? const Color(0xFF9AD7AA) : const Color(0xFFE8B5BC))),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12), onTap: received ? null : () => _openAccount(a),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11), child: Row(children: [
+          const Icon(Icons.local_drink, color: Color(0xFF47616F), size: 30),
+          const SizedBox(width: 10),
+          SizedBox(width: 34, child: Text('${a['account_number']}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19))),
+          const SizedBox(width: 8),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(a['customer_name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            if ((a['father_name'] as String? ?? '').isNotEmpty)
+              Text('${t('ولد:', 'S/O:', 'पुत्र:')} ${a['father_name']}', style: const TextStyle(fontSize: 11)),
+          ])),
+          Icon(received ? Icons.check_circle : Icons.check_box_outline_blank, color: received ? const Color(0xFF079B37) : const Color(0xFF54616B), size: 28),
+        ])),
+      ),
+    );
+  }
+
+  Widget _entryView(Map<String, Object?> a) {
+    final fatEnabled = (a['fat_enabled'] as int? ?? 0) == 1;
+    final rate = _money(a['milk_rate_paisa']);
+    return ListView(padding: const EdgeInsets.all(13), children: [
+      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFDDF5E5), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF80C995))),
+        child: Row(children: [
+          const Icon(Icons.local_drink, size: 48, color: Color(0xFF527181)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${a['customer_name']}  •  ${t('کھاتہ نمبر:', 'Account:', 'खाता नंबर:')} ${a['account_number']}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            if ((a['father_name'] as String? ?? '').isNotEmpty) Text('${t('ولد:', 'S/O:', 'पुत्र:')} ${a['father_name']}'),
+            if ((a['phone_number'] as String? ?? '').isNotEmpty) Text('${a['country_code']} ${a['phone_number']}'),
+          ])),
+        ])),
+      const SizedBox(height: 12),
+      _input(_quantity, t('آج کا دودھ (کلو)', 'Today’s milk (kg)', 'आज का दूध (kg)'), Icons.local_drink, decimal: true),
+      if (fatEnabled) ...[const SizedBox(height: 10), _input(_fat, 'FAT (%)', Icons.water_drop, decimal: true)],
+      const SizedBox(height: 10),
+      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFB7D5EF))),
+        child: Row(children: [const Icon(Icons.price_change, color: Color(0xFF0649AE)), const SizedBox(width: 8), Expanded(child: Text(t('دودھ کا ریٹ فی کلو', 'Milk rate per kg', 'दूध का रेट प्रति किलो'))), Text('Rs. $rate', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))])),
+      const SizedBox(height: 10),
+      Row(children: [
+        Expanded(child: OutlinedButton.icon(onPressed: _pickDate, icon: const Icon(Icons.calendar_month), label: Text(_dateLabel(_date)))),
+        const SizedBox(width: 8),
+        Expanded(child: OutlinedButton.icon(onPressed: _pickTime, icon: const Icon(Icons.access_time), label: Text(TimeOfDay.fromDateTime(_recordedAt).format(context)))),
+      ]),
+      const SizedBox(height: 10),
+      TextField(controller: _note, maxLines: 2, decoration: InputDecoration(labelText: t('نوٹ / وجہ (اختیاری)', 'Note (optional)', 'नोट (वैकल्पिक)'), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+      const SizedBox(height: 10),
+      _toggleRow(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें'), Icons.sms, _sendSms, (v) => setState(() => _sendSms = v)),
+      _toggleRow(t('WhatsApp پر بھیجیں', 'Send on WhatsApp', 'WhatsApp पर भेजें'), Icons.chat, _sendWhatsApp, (v) => setState(() => _sendWhatsApp = v)),
+      const SizedBox(height: 14),
+      SizedBox(height: 54, child: FilledButton.icon(
+        onPressed: _saving ? null : _save, icon: const Icon(Icons.check_circle),
+        label: Text(_saving ? t('محفوظ ہو رہا ہے...', 'Saving...', 'सेव हो रहा है...') : t('دودھ محفوظ کریں', 'Save Milk Entry', 'दूध सेव करें')),
+        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF079B37), foregroundColor: Colors.white, textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)))),
+    ]);
+  }
+
+  Widget _input(TextEditingController controller, String label, IconData icon, {bool decimal = false}) => TextField(
+    controller: controller, keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+    decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))));
+
+  Widget _toggleRow(String label, IconData icon, bool value, ValueChanged<bool> onChanged) => Container(
+    margin: const EdgeInsets.only(bottom: 7), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFB7D5EF))),
+    child: Row(children: [Icon(icon, color: const Color(0xFF0875B9)), const SizedBox(width: 8), Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))), Switch(value: value, onChanged: onChanged, activeColor: const Color(0xFF079B37))]),
+  );
 }

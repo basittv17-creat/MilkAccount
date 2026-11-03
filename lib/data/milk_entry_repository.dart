@@ -15,6 +15,28 @@ class MilkEntryRepository {
     );
   }
 
+  /// Returns active accounts and whether each has a milk entry on the selected
+  /// local calendar day. Timestamps are stored in UTC, so compare UTC bounds.
+  Future<List<Map<String, Object?>>> accountsForDate(DateTime date) async {
+    final startLocal = DateTime(date.year, date.month, date.day);
+    final endLocal = startLocal.add(const Duration(days: 1));
+    final start = startLocal.toUtc().toIso8601String();
+    final end = endLocal.toUtc().toIso8601String();
+    final db = await _database.database;
+    return db.rawQuery('''
+      SELECT a.id, a.account_number, a.customer_name, a.father_name,
+             a.country_code, a.phone_number, a.milk_rate_paisa, a.fat_enabled,
+             CASE WHEN EXISTS (
+               SELECT 1 FROM milk_entries m
+               WHERE m.account_id = a.id
+                 AND m.recorded_at >= ? AND m.recorded_at < ?
+             ) THEN 1 ELSE 0 END AS has_entry
+      FROM accounts a
+      WHERE a.is_active = 1
+      ORDER BY a.account_number ASC
+    ''', [start, end]);
+  }
+
   Future<int> createEntry({
     required String accountId,
     required DateTime recordedAt,
