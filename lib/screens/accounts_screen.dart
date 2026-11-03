@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/account_repository.dart';
 import 'new_account_screen.dart';
+import 'account_details_screen.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key, required this.language});
@@ -161,6 +162,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
                           side: const BorderSide(color: Color(0xFFD6E8F8)),
                         ),
                         child: ListTile(
+                          onTap: () async {
+                            await Navigator.push<void>(context, MaterialPageRoute(
+                              builder: (_) => AccountDetailsScreen(
+                                accountId: account['id'].toString(),
+                                language: widget.language,
+                              ),
+                            ));
+                            if (mounted) setState(() => _accounts = _repository.searchAccounts(_search.text));
+                          },
                           leading: CircleAvatar(
                             backgroundColor: const Color(0xFFE0F8E8),
                             child: Text(
