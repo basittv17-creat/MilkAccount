@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/accounts_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,7 +98,7 @@ class _DashboardState extends State<Dashboard> {
         actions:[IconButton(onPressed:(){},icon:const Icon(Icons.notifications_none_rounded,size:28))],
         flexibleSpace:Stack(fit:StackFit.expand,children:[const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF003B91),Color(0xFF0879D5)]))),const Align(alignment:Alignment.centerLeft,child:Opacity(opacity:.18,child:Text('🐄',style:TextStyle(fontSize:40)))),const Align(alignment:Alignment.centerRight,child:Opacity(opacity:.18,child:Text('🥛',style:TextStyle(fontSize:36))))]),
       )),
-      body:tab==0?home():Center(child:Text(tr(widget.language,labels[tab]),style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
+      body:tab==0?home():tab==1?AccountsScreen(language:widget.language):Center(child:Text(tr(widget.language,labels[tab]),style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold))),
       bottomNavigationBar:NavigationBar(height:76,backgroundColor:Colors.white,indicatorColor:const Color(0xFFDCEBFF),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,destinations:[
         NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:tr(widget.language,'home')),
         NavigationDestination(icon:const Icon(Icons.people_outline),selectedIcon:const Icon(Icons.people),label:tr(widget.language,'accounts')),

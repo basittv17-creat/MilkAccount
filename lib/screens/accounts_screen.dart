@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/account_repository.dart';
+import 'new_account_screen.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key, required this.language});
@@ -15,26 +16,33 @@ class _AccountsScreenState extends State<AccountsScreen> {
   late Future<List<Map<String, Object?>>> _accounts;
 
   bool get _urdu => widget.language == 'ur';
+  Future<void> _addAccount() async {
+    final saved = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => NewAccountScreen(language: widget.language)));
+    if (saved == true && mounted) setState(() => _accounts = _repository.searchAccounts(_search.text));
+  }
   String _text(String key) {
     const values = {
       'ur': {
         'title': 'کھاتے', 'search': 'نام یا کھاتہ نمبر تلاش کریں',
         'empty': 'ابھی کوئی کھاتہ موجود نہیں',
-        'hint': 'نیا کھاتہ بنانے کا مرحلہ اگلا ہے',
+        'hint': 'نیا کھاتہ بنانے کے لیے + دبائیں',
+        'add': 'نیا کھاتہ',
         'number': 'کھاتہ نمبر', 'phone': 'فون نمبر',
         'error': 'کھاتے لوڈ نہیں ہو سکے',
       },
       'en': {
         'title': 'Accounts', 'search': 'Search by name or account number',
         'empty': 'No accounts yet',
-        'hint': 'Creating a new account is the next phase',
+        'hint': 'Tap + to create a new account',
+        'add': 'New Account',
         'number': 'Account No.', 'phone': 'Phone number',
         'error': 'Could not load accounts',
       },
       'hi': {
         'title': 'खाते', 'search': 'नाम या खाता नंबर खोजें',
         'empty': 'अभी कोई खाता नहीं है',
-        'hint': 'नया खाता बनाना अगला चरण है',
+        'hint': 'नया खाता बनाने के लिए + दबाएँ',
+        'add': 'नया खाता',
         'number': 'खाता नंबर', 'phone': 'फ़ोन नंबर',
         'error': 'खाते लोड नहीं हो सके',
       },
@@ -63,6 +71,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
         textDirection: _urdu ? TextDirection.rtl : TextDirection.ltr,
         child: Column(
           children: [
+            Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: Row(children: [
+              Expanded(child: Text(_text('title'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
+              FilledButton.icon(onPressed: _addAccount, icon: const Icon(Icons.add), label: Text(_text('add'))),
+            ])),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
               child: TextField(
