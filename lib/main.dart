@@ -135,6 +135,6 @@ class _DashboardState extends State<Dashboard> {
     ListTile(leading:const Icon(Icons.backup_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'backup')),onTap:(){Navigator.pop(ctx);Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>BackupScreen(language:widget.language)));}),
     ListTile(leading:const Icon(Icons.language_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'language')),onTap:(){Navigator.pop(ctx);languagePicker();}),
     const ListTile(leading:Icon(Icons.info_outline,color:Color(0xFF0756C9)),title:Text('Milk Account'),subtitle:Text('Milk Collection & Account Management App')),
-  ]))));
+  ])))));
   void languagePicker()=>showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])ListTile(leading:Text(option.$2,style:const TextStyle(fontSize:24)),title:Text(option.$3),onTap:(){Navigator.pop(ctx);widget.onLanguage(option.$1);})])));
 }
