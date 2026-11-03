@@ -24,3 +24,9 @@ if [[ -f "$APP_GRADLE" ]]; then
     exit 1
   fi
 fi
+
+# Fail early if the generated application Gradle file did not receive API 36.
+if [[ ! -f "$APP_GRADLE" ]] || ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
+  echo "Android app compileSdk must be 36; generated configuration is not correct." >&2
+  exit 1
+fi
