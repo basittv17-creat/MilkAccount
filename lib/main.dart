@@ -59,7 +59,19 @@ class _LanguageScreenState extends State<LanguageScreen> {
       Container(width:double.infinity,padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:Colors.white,borderRadius:const BorderRadius.all(Radius.circular(26)),border:Border.all(color:const Color(0xFF9EDCFF),width:3)),child:Column(children:[
         Text(tr(selected,'choose'),style:const TextStyle(fontSize:23,fontWeight:FontWeight.bold,color:Color(0xFF062D70))),const SizedBox(height:14),
         for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])
-          ListTile(dense:true,shape:RoundedRectangleBorder(borderRadius:const BorderRadius.all(Radius.circular(14))),tileColor:selected==option.$1?const Color(0xFFE8F8EC):Colors.white,leading:Text(option.$2,style:const TextStyle(fontSize:25)),title:Text(option.$3,style:const TextStyle(fontWeight:FontWeight.w700)),trailing:Icon(selected==option.$1?Icons.check_circle:Icons.radio_button_unchecked,color:selected==option.$1?Colors.green:Colors.blueGrey),onTap:()=>setState(()=>selected=option.$1)),
+          Material(
+            color:selected==option.$1?const Color(0xFFE8F8EC):Colors.white,
+            borderRadius:const BorderRadius.all(Radius.circular(14)),
+            clipBehavior:Clip.antiAlias,
+            child:ListTile(
+              dense:true,
+              shape:RoundedRectangleBorder(borderRadius:const BorderRadius.all(Radius.circular(14))),
+              leading:Text(option.$2,style:const TextStyle(fontSize:25)),
+              title:Text(option.$3,style:const TextStyle(fontWeight:FontWeight.w700)),
+              trailing:Icon(selected==option.$1?Icons.check_circle:Icons.radio_button_unchecked,color:selected==option.$1?Colors.green:Colors.blueGrey),
+              onTap:()=>setState(()=>selected=option.$1),
+            ),
+          ),
         const SizedBox(height:12),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>widget.onSelect(selected),icon:const Icon(Icons.arrow_forward),label:Text(tr(selected,'continue')),style:FilledButton.styleFrom(backgroundColor:const Color(0xFF08A832),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:16))))
       ]))
     ]))))),
