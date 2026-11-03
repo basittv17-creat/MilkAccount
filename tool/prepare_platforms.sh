@@ -36,8 +36,8 @@ fi
 # Flutter's newer Android DSL otherwise causes a ClassCastException in that plugin.
 GRADLE_PROPERTIES="android/gradle.properties"
 if [[ -f "$GRADLE_PROPERTIES" ]]; then
-  grep -q '^android.newDsl=' "$GRADLE_PROPERTIES" || printf '\\nandroid.newDsl=false\\n' >> "$GRADLE_PROPERTIES"
-  grep -q '^android.builtInKotlin=' "$GRADLE_PROPERTIES" || printf 'android.builtInKotlin=false\\n' >> "$GRADLE_PROPERTIES"
+  grep -q '^android.newDsl=' "$GRADLE_PROPERTIES" || printf '\nandroid.newDsl=false\n' >> "$GRADLE_PROPERTIES"
+  grep -q '^android.builtInKotlin=' "$GRADLE_PROPERTIES" || printf 'android.builtInKotlin=false\n' >> "$GRADLE_PROPERTIES"
 else
   echo "Missing generated Gradle properties file: $GRADLE_PROPERTIES" >&2
   exit 1
