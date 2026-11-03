@@ -14,9 +14,12 @@ void main() {
   });
 
   test('monthly reports aggregate milk, payments, customers and days', () async {
+    // Keep this fixture in a unique month so other tests cannot affect totals.
+    const reportYear = 2098;
+    const reportMonth = 11;
     await AccountRepository().createAccount(
       customerName: 'Phase10 Report Customer',
-      startAt: DateTime(2026, 11, 1),
+      startAt: DateTime(reportYear, reportMonth, 1),
       milkRatePaisa: 10000,
     );
     final db = await AppDatabase.instance.database;
@@ -25,23 +28,25 @@ void main() {
     final id = account['id'] as String;
     await MilkEntryRepository().createEntry(
       accountId: id,
-      recordedAt: DateTime(2026, 11, 3),
+      recordedAt: DateTime(reportYear, reportMonth, 3),
       quantityGrams: 2000,
       ratePaisaPerKg: 10000,
     );
     await AdvanceRepository().addAdvance(
       accountId: id,
-      recordedAt: DateTime(2026, 11, 3),
+      recordedAt: DateTime(reportYear, reportMonth, 3),
       amountPaisa: 1000,
       direction: 'received_from_customer',
     );
     final repo = ReportsRepository();
-    final summary = await repo.summary(DateTime(2026, 11));
+    final month = DateTime(reportYear, reportMonth);
+    final summary = await repo.summary(month);
     expect(summary['milk_amount_paisa'], 20000);
     expect(summary['payment_received_paisa'], 1000);
     expect(summary['balance_paisa'], 19000);
-    expect((await repo.customerTotals(DateTime(2026, 11))).single['entries'], 1);
-    expect((await repo.dailyTotals(DateTime(2026, 11))).single['quantity_grams'], 2000);
+    final customerRows = await repo.customerTotals(month);
+    expect(customerRows.firstWhere((row) => row['id'] == id)['entries'], 1);
+    expect((await repo.dailyTotals(month)).single['quantity_grams'], 2000);
     await AppDatabase.instance.close();
   });
 }

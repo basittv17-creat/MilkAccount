@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../data/reports_repository.dart';
+import '../services/report_export_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key, required this.language});
@@ -10,7 +13,9 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   final _repo = ReportsRepository();
+  final _export = ReportExportService();
   DateTime _month = DateTime.now();
+  bool _busy = false;
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) =>
       _ur ? u : widget.language == 'hi' ? h : e;
@@ -30,6 +35,69 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  Future<({Uint8List pdf, String message})> _reportData() async {
+    final summary = await _repo.summary(_month);
+    final customers = await _repo.customerTotals(_month);
+    final daily = await _repo.dailyTotals(_month);
+    final period = '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
+    final lines = <String>[
+      'Period: $period',
+      'Milk amount: ${money(summary['milk_amount_paisa'])}',
+      'Balance: ${money(summary['balance_paisa'])}',
+      'Advance given: ${money(summary['advance_given_paisa'])}',
+      'Payments received: ${money(summary['payment_received_paisa'])}',
+      'Milk quantity: ${((summary['milk_quantity_grams'] ?? 0) / 1000).toStringAsFixed(3)} kg',
+      'Milk entries: ${summary['milk_entries']}',
+      'No-milk days: ${summary['no_milk_days']}',
+      '',
+      'CUSTOMER TOTALS',
+      ...customers.map((row) =>
+          '#${row['account_number']} ${row['customer_name']}: ${money(row['amount_paisa'])} (${((row['quantity_grams'] as int) / 1000).toStringAsFixed(3)} kg)'),
+      '',
+      'DAILY TOTALS',
+      ...daily.map((row) =>
+          '${row['day']}: ${money(row['amount_paisa'])}, ${((row['quantity_grams'] as int) / 1000).toStringAsFixed(3)} kg'),
+    ];
+    final message = lines.join('\n');
+    final pdf = await _export.createPdf(
+      title: 'Milk Account — Monthly Report',
+      lines: lines,
+    );
+    return (pdf: pdf, message: message);
+  }
+
+  Future<void> _runExport(String action) async {
+    setState(() => _busy = true);
+    try {
+      final data = await _reportData();
+      if (action == 'print') {
+        await _export.printPdf(data.pdf);
+      } else if (action == 'pdf') {
+        final period =
+            '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
+        await _export.sharePdf(data.pdf, 'milk-account-$period.pdf');
+      } else if (action == 'sms') {
+        final ok = await _export.sendSms(data.message);
+        if (!ok && mounted) {
+          _message(t('SMS ایپ نہیں کھل سکی', 'Could not open SMS app', 'SMS ऐप नहीं खुला'));
+        }
+      } else {
+        final ok = await _export.shareWhatsApp(data.message);
+        if (!ok && mounted) {
+          _message(t('WhatsApp نہیں کھل سکا', 'Could not open WhatsApp', 'WhatsApp नहीं खुला'));
+        }
+      }
+    } catch (error) {
+      if (mounted) _message('${t('رپورٹ تیار نہیں ہو سکی', 'Could not prepare report', 'रिपोर्ट तैयार नहीं हुई')}: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _message(String value) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+  }
+
   Widget _metric(String title, Object? value, Color color) => Container(
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
@@ -45,6 +113,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
+        ),
+      );
+
+  Widget _exportButton(
+          String action, String label, IconData icon, Color color) =>
+      Expanded(
+        child: OutlinedButton.icon(
+          onPressed: _busy ? null : () => _runExport(action),
+          icon: Icon(icon, size: 18),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: color,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
+          ),
         ),
       );
 
@@ -66,6 +148,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 icon: const Icon(Icons.calendar_month),
                 label: Text('${_month.year} / ${_month.month.toString().padLeft(2, '0')}'),
               ),
+              const SizedBox(height: 8),
+              if (_busy) const LinearProgressIndicator(),
+              Row(children: [
+                _exportButton('pdf', t('PDF شیئر', 'PDF / Share', 'PDF साझा'), Icons.picture_as_pdf, const Color(0xFFB3261E)),
+                const SizedBox(width: 5),
+                _exportButton('print', t('پرنٹ', 'Print', 'प्रिंट'), Icons.print, const Color(0xFF0756C9)),
+              ]),
+              Row(children: [
+                _exportButton('sms', t('SMS', 'SMS', 'SMS'), Icons.sms, const Color(0xFF079B37)),
+                const SizedBox(width: 5),
+                _exportButton('whatsapp', t('واٹس ایپ', 'WhatsApp', 'WhatsApp'), Icons.chat, const Color(0xFF168B45)),
+              ]),
               const SizedBox(height: 12),
               FutureBuilder<Map<String, int>>(
                 future: _repo.summary(_month),
@@ -76,9 +170,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (snapshot.hasError) {
-                    return Text(snapshot.error.toString());
-                  }
+                  if (snapshot.hasError) return Text(snapshot.error.toString());
                   final data = snapshot.data!;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
