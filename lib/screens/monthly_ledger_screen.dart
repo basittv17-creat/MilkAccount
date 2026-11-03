@@ -175,6 +175,9 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
                               ' kg   •   ' +
                               t('اندراجات: ', 'Entries: ', 'एंट्री: ') +
                               (values['milk_entries'] ?? 0).toString(),
+                              '   •   ' +
+                              t('ناگا کے دن: ', 'No-milk days: ', 'नागा दिन: ') +
+                              (values['no_milk_days'] ?? 0).toString(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
