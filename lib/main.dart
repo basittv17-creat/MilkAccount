@@ -95,6 +95,7 @@ class Dashboard extends StatefulWidget {
 }
 class _DashboardState extends State<Dashboard> {
   int tab=0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool get rtl=>LanguageSupport.isRtl(widget.language);
   final _dashboardRepository = HomeDashboardRepository();
   late Future<Map<String, Object?>> _dashboardFuture;
@@ -119,9 +120,11 @@ class _DashboardState extends State<Dashboard> {
   Widget build(BuildContext context) {
     final labels=['home','accounts','reports','settings'];
     return Directionality(textDirection:rtl?TextDirection.rtl:TextDirection.ltr,child:Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildDrawer(),
       appBar:PreferredSize(preferredSize:const Size.fromHeight(76),child:AppBar(
         backgroundColor:const Color(0xFF0649AE),foregroundColor:Colors.white,
-        leading:IconButton(icon:const Icon(Icons.menu_rounded,size:30),onPressed:menu),titleSpacing:0,
+        leading:IconButton(icon:const Icon(Icons.menu_rounded,size:30),onPressed:()=>_scaffoldKey.currentState?.openDrawer()),titleSpacing:0,
         title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:45,height:45,decoration:BoxDecoration(color:Colors.white.withOpacity(.12),border:Border.all(color:Colors.white,width:2),borderRadius:const BorderRadius.all(Radius.circular(12))),child:const Icon(Icons.local_drink_rounded,size:32,color:Colors.white)),const SizedBox(width:9),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Milk Account',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,fontStyle:FontStyle.italic,color:Colors.white)),Text(tr(widget.language,'brand'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:Colors.white))]))]),
         actions:[IconButton(onPressed:(){},icon:const Icon(Icons.notifications_none_rounded,size:28))],
         flexibleSpace:Stack(fit:StackFit.expand,children:[const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF003B91),Color(0xFF0879D5)]))),const Align(alignment:Alignment.centerLeft,child:Opacity(opacity:.18,child:Text('🐄',style:TextStyle(fontSize:40)))),const Align(alignment:Alignment.centerRight,child:Opacity(opacity:.18,child:Text('🥛',style:TextStyle(fontSize:36))))]),
@@ -322,17 +325,129 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Widget action(String title,String sub,IconData icon,Color color,Color tint)=>Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:tint,border:Border.all(color:color,width:1.6),borderRadius:const BorderRadius.all(Radius.circular(23)),boxShadow:const[BoxShadow(color:Color(0x16002D64),blurRadius:5,offset:Offset(0,3))]),child:InkWell(onTap:()=>title=='accounts'?setState(()=>tab=1):title=='milk'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkEntryScreen(language:widget.language))):title=='advance'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>AdvanceScreen(language:widget.language))):title=='ledger'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MonthlyLedgerScreen(language:widget.language))):title=='rates'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkRateScreen(language:widget.language))):title=='naga'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>NoMilkScreen(language:widget.language))):ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${tr(widget.language,title)} — ${tr(widget.language,'later')}'))),borderRadius:const BorderRadius.all(Radius.circular(23)),child:Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:17),child:Row(children:[CircleAvatar(radius:30,backgroundColor:color,child:Icon(icon,color:Colors.white,size:33)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(tr(widget.language,title),style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Color(0xFF101820))),Text(tr(widget.language,sub),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:13,color:Color(0xFF24364B)))])),const Icon(Icons.chevron_right_rounded,size:34)]))));
-  void menu()=>showModalBottomSheet<void>(context:context,isScrollControlled:true,builder:(ctx)=>Directionality(textDirection:rtl?TextDirection.rtl:TextDirection.ltr,child:SafeArea(child:Container(decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:ListView(shrinkWrap:true,padding:const EdgeInsets.all(12),children:[
-    const SizedBox(height:5),
-    Center(child:Container(width:42,height:4,decoration:BoxDecoration(color:Color(0xFFCBD8E5),borderRadius:BorderRadius.all(Radius.circular(4))))),
-    const SizedBox(height:12),
-    Text(tr(widget.language,'menu'),textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:Color(0xFF0649AE))),
-    ListTile(leading:const Icon(Icons.calendar_month_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'ledger')),onTap:(){Navigator.pop(ctx);Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MonthlyLedgerScreen(language:widget.language)));}),
-    ListTile(leading:const Icon(Icons.price_change_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'rates')),onTap:(){Navigator.pop(ctx);Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkRateScreen(language:widget.language)));}),
-    ListTile(leading:const Icon(Icons.event_busy_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'naga')),onTap:(){Navigator.pop(ctx);Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>NoMilkScreen(language:widget.language)));}),
-    ListTile(leading:const Icon(Icons.backup_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'backup')),onTap:(){Navigator.pop(ctx);Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>BackupScreen(language:widget.language)));}),
-    ListTile(leading:const Icon(Icons.language_rounded,color:Color(0xFF0756C9)),title:Text(tr(widget.language,'language')),onTap:(){Navigator.pop(ctx);languagePicker();}),
-    const ListTile(leading:Icon(Icons.info_outline,color:Color(0xFF0756C9)),title:Text('Milk Account'),subtitle:Text('Milk Collection & Account Management App')),
-  ])))));
+  Widget _buildDrawer() => Drawer(
+    width: 310,
+    child: SafeArea(
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF003B91), Color(0xFF0879D5)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.16),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white70, width: 1.5),
+                  ),
+                  child: const Icon(Icons.local_drink_rounded, color: Colors.white, size: 38),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Milk Account',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+                Text(
+                  tr(widget.language, 'brand'),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tr(widget.language, 'menu'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                _drawerTile(Icons.home_rounded, tr(widget.language, 'home'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  setState(() => tab = 0);
+                }),
+                _drawerTile(Icons.people_alt_rounded, tr(widget.language, 'accounts'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  setState(() => tab = 1);
+                }),
+                _drawerTile(Icons.bar_chart_rounded, tr(widget.language, 'reports'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  setState(() => tab = 2);
+                }),
+                const Divider(indent: 16, endIndent: 16, height: 18),
+                _drawerTile(Icons.local_drink_rounded, tr(widget.language, 'milk'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(MilkEntryScreen(language: widget.language));
+                }),
+                _drawerTile(Icons.payments_rounded, tr(widget.language, 'advance'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(AdvanceScreen(language: widget.language));
+                }),
+                _drawerTile(Icons.calendar_month_rounded, tr(widget.language, 'ledger'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(MonthlyLedgerScreen(language: widget.language));
+                }),
+                _drawerTile(Icons.price_change_rounded, tr(widget.language, 'rates'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(MilkRateScreen(language: widget.language));
+                }),
+                _drawerTile(Icons.event_busy_rounded, tr(widget.language, 'naga'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(NoMilkScreen(language: widget.language));
+                }),
+                const Divider(indent: 16, endIndent: 16, height: 18),
+                _drawerTile(Icons.backup_rounded, tr(widget.language, 'backup'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  _open(BackupScreen(language: widget.language));
+                }),
+                _drawerTile(Icons.settings_rounded, tr(widget.language, 'settings'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  setState(() => tab = 3);
+                }),
+                _drawerTile(Icons.language_rounded, tr(widget.language, 'language'), () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  languagePicker();
+                }),
+                _drawerTile(Icons.info_outline_rounded, 'About Milk Account', () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  showAboutDialog(
+                    context: context,
+                    applicationName: 'Milk Account',
+                    applicationVersion: '1.0.0',
+                    applicationLegalese: 'Milk Collection & Account Management App',
+                  );
+                }),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Milk Account • 1.0.0', style: TextStyle(color: Colors.blueGrey, fontSize: 11)),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _drawerTile(IconData icon, String title, VoidCallback onTap) => ListTile(
+    leading: Icon(icon, color: const Color(0xFF0756C9)),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+    trailing: Icon(rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: Colors.blueGrey),
+    dense: true,
+    onTap: onTap,
+  );
+
   void languagePicker()=>showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])ListTile(leading:Text(option.$2,style:const TextStyle(fontSize:24)),title:Text(option.$3),onTap:(){Navigator.pop(ctx);widget.onLanguage(option.$1);})])));
 }
