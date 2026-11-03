@@ -10,6 +10,7 @@ import 'screens/no_milk_screen.dart';
 import 'screens/reports_screen.dart';
 import 'l10n/language_support.dart';
 import 'screens/backup_screen.dart';
+import 'data/home_dashboard_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,9 +47,9 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
 }
 
 const copy = <String, Map<String, String>>{
-  'ur': {'choose':'زبان منتخب کریں','continue':'جاری رکھیں','brand':'دودھ کا کھاتہ','milk':'دودھ کا اندراج','milkSub':'روزانہ کا دودھ درج کریں','advance':'ایڈوانس','advanceSub':'پہلے سے وصول کی گئی رقم','ledger':'ماہانہ کھاتہ','ledgerSub':'ماہانہ دودھ اور بیلنس','rates':'دودھ کے ریٹ','ratesSub':'ہر گاہک کا دودھ ریٹ تبدیل کریں','naga':'ناگا (دودھ نہیں آیا)','nagaSub':'جس دن دودھ نہ آئے اس کا اندراج کریں','accounts':'کھاتے','accountsSub':'مکمل تفصیل والے کھاتے','home':'ہوم','reports':'رپورٹس','settings':'سیٹنگز','backup':'بیک اپ اور ڈیٹا منتقلی','ad':'دودھ کی کوالٹی بہتر بنائیں!','adSub':'بہترین فیڈ، خوراک اور ڈیری پروڈکٹس','learn':'مزید جانیں','language':'زبان تبدیل کریں','menu':'دیگر سہولیات','later':'یہ سہولت اگلے مرحلے میں شامل ہوگی','saved':'دودھ کا اندراج محفوظ ہو گیا','milkEntry':'روزانہ دودھ درج کریں'},
-  'en': {'choose':'Select Language','continue':'Continue','brand':'Milk Account','milk':'Milk Entry','milkSub':'Add daily milk record','advance':'Advance','advanceSub':'Receive advance payment','ledger':'Monthly Ledger','ledgerSub':'Monthly milk and balance','rates':'Milk Rates','ratesSub':'Manage each customer milk rate','naga':'No-Milk Day (Naga)','nagaSub':'Record a day when no milk arrives','accounts':'Accounts','accountsSub':'Complete account details','home':'Home','reports':'Reports','settings':'Settings','backup':'Backup & Data Transfer','ad':'Improve Milk Quality!','adSub':'Best feed, nutrition and dairy products','learn':'Learn More','language':'Change language','menu':'More services','later':'This feature will be added in a later phase','saved':'Milk entry saved successfully','milkEntry':'Daily milk entry'},
-  'hi': {'choose':'भाषा चुनें','continue':'जारी रखें','brand':'दूध का खाता','milk':'दूध की एंट्री','milkSub':'रोज़ाना का दूध दर्ज करें','advance':'एडवांस','advanceSub':'पहले से प्राप्त की गई राशि','ledger':'मासिक खाता','ledgerSub':'मासिक दूध और बैलेंस','rates':'दूध के रेट','ratesSub':'हर ग्राहक का दूध रेट बदलें','naga':'नागा (दूध नहीं आया)','nagaSub':'जिस दिन दूध न आए उसका रिकॉर्ड करें','accounts':'खाते','accountsSub':'पूरी जानकारी वाले खाते','home':'होम','reports':'रिपोर्ट','settings':'सेटिंग्स','backup':'बैकअप और डेटा ट्रांसफर','ad':'दूध की गुणवत्ता बढ़ाएँ!','adSub':'बेहतर चारा, पोषण और डेयरी उत्पाद','learn':'और जानें','language':'भाषा बदलें','menu':'अन्य सुविधाएँ','later':'यह सुविधा अगले चरण में जोड़ी जाएगी','saved':'दूध की एंट्री सेव हो गई','milkEntry':'रोज़ाना दूध दर्ज करें'},
+  'ur': {'choose':'زبان منتخب کریں','continue':'جاری رکھیں','brand':'دودھ کا کھاتہ','milk':'دودھ کا اندراج','milkSub':'روزانہ کا دودھ درج کریں','advance':'ایڈوانس','advanceSub':'پہلے سے وصول کی گئی رقم','ledger':'ماہانہ کھاتہ','ledgerSub':'ماہانہ دودھ اور بیلنس','rates':'دودھ کے ریٹ','ratesSub':'ہر گاہک کا دودھ ریٹ تبدیل کریں','naga':'ناگا (دودھ نہیں آیا)','nagaSub':'جس دن دودھ نہ آئے اس کا اندراج کریں','accounts':'کھاتے','accountsSub':'مکمل تفصیل والے کھاتے','home':'ہوم','reports':'رپورٹس','settings':'سیٹنگز','backup':'بیک اپ اور ڈیٹا منتقلی','ad':'دودھ کی کوالٹی بہتر بنائیں!','adSub':'بہترین فیڈ، خوراک اور ڈیری پروڈکٹس','learn':'مزید جانیں','language':'زبان تبدیل کریں','menu':'دیگر سہولیات','later':'یہ سہولت اگلے مرحلے میں شامل ہوگی','saved':'دودھ کا اندراج محفوظ ہو گیا','milkEntry':'روزانہ دودھ درج کریں','todaySummary':'آج کا خلاصہ','todayMilk':'آج کا دودھ','todayAmount':'آج کی دودھ کی رقم','totalAdvance':'کل ایڈوانس دیا','remainingAdvance':'باقی ایڈوانس','monthlySummary':'ماہانہ خلاصہ','milkAmount':'دودھ کی رقم','monthBalance':'ماہانہ بیلنس','milkQuantity':'دودھ کی مقدار','milkEntries':'اندراجات','dailyMilkList':'روزانہ دودھ کی فہرست','noDailyMilk':'اس مہینے ابھی دودھ درج نہیں ہوا','entries':'اندراجات','quickActions':'فوری سہولیات','dashboardError':'ڈیش بورڈ ڈیٹا لوڈ نہیں ہو سکا'},
+  'en': {'choose':'Select Language','continue':'Continue','brand':'Milk Account','milk':'Milk Entry','milkSub':'Add daily milk record','advance':'Advance','advanceSub':'Receive advance payment','ledger':'Monthly Ledger','ledgerSub':'Monthly milk and balance','rates':'Milk Rates','ratesSub':'Manage each customer milk rate','naga':'No-Milk Day (Naga)','nagaSub':'Record a day when no milk arrives','accounts':'Accounts','accountsSub':'Complete account details','home':'Home','reports':'Reports','settings':'Settings','backup':'Backup & Data Transfer','ad':'Improve Milk Quality!','adSub':'Best feed, nutrition and dairy products','learn':'Learn More','language':'Change language','menu':'More services','later':'This feature will be added in a later phase','saved':'Milk entry saved successfully','milkEntry':'Daily milk entry','todaySummary':'Today’s Summary','todayMilk':'Today’s Milk','todayAmount':'Today’s Milk Amount','totalAdvance':'Total Advance Given','remainingAdvance':'Remaining Advance','monthlySummary':'Monthly Summary','milkAmount':'Milk Amount','monthBalance':'Monthly Balance','milkQuantity':'Milk Quantity','milkEntries':'Milk Entries','dailyMilkList':'Daily Milk List','noDailyMilk':'No milk entries recorded this month yet','entries':'entries','quickActions':'Quick Actions','dashboardError':'Could not load dashboard data'},
+  'hi': {'choose':'भाषा चुनें','continue':'जारी रखें','brand':'दूध का खाता','milk':'दूध की एंट्री','milkSub':'रोज़ाना का दूध दर्ज करें','advance':'एडवांस','advanceSub':'पहले से प्राप्त की गई राशि','ledger':'मासिक खाता','ledgerSub':'मासिक दूध और बैलेंस','rates':'दूध के रेट','ratesSub':'हर ग्राहक का दूध रेट बदलें','naga':'नागा (दूध नहीं आया)','nagaSub':'जिस दिन दूध न आए उसका रिकॉर्ड करें','accounts':'खाते','accountsSub':'पूरी जानकारी वाले खाते','home':'होम','reports':'रिपोर्ट','settings':'सेटिंग्स','backup':'बैकअप और डेटा ट्रांसफर','ad':'दूध की गुणवत्ता बढ़ाएँ!','adSub':'बेहतर चारा, पोषण और डेयरी उत्पाद','learn':'और जानें','language':'भाषा बदलें','menu':'अन्य सुविधाएँ','later':'यह सुविधा अगले चरण में जोड़ी जाएगी','saved':'दूध की एंट्री सेव हो गई','milkEntry':'रोज़ाना दूध दर्ज करें','todaySummary':'आज का सारांश','todayMilk':'आज का दूध','todayAmount':'आज के दूध की रकम','totalAdvance':'कुल दिया एडवांस','remainingAdvance':'बाकी एडवांस','monthlySummary':'मासिक सारांश','milkAmount':'दूध की रकम','monthBalance':'मासिक बैलेंस','milkQuantity':'दूध की मात्रा','milkEntries':'दूध एंट्री','dailyMilkList':'रोज़ाना दूध सूची','noDailyMilk':'इस महीने अभी दूध दर्ज नहीं हुआ','entries':'एंट्री','quickActions':'त्वरित सुविधाएँ','dashboardError':'डैशबोर्ड डेटा लोड नहीं हुआ'},
 };
 String tr(String lang, String key) => copy[lang]?[key] ?? copy['en']![key]!;
 
@@ -95,6 +96,25 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   int tab=0;
   bool get rtl=>LanguageSupport.isRtl(widget.language);
+  final _dashboardRepository = HomeDashboardRepository();
+  late Future<Map<String, Object?>> _dashboardFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardFuture = _dashboardRepository.load(DateTime.now());
+  }
+
+  void _refreshDashboard() {
+    if (mounted) setState(() => _dashboardFuture = _dashboardRepository.load(DateTime.now()));
+  }
+
+  String _money(Object? value) => 'Rs. ' + ((((value as int?) ?? 0) / 100).toStringAsFixed(2));
+
+  Future<void> _open(Widget page) async {
+    await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => page));
+    _refreshDashboard();
+  }
   @override
   Widget build(BuildContext context) {
     final labels=['home','accounts','reports','settings'];
@@ -115,14 +135,192 @@ class _DashboardState extends State<Dashboard> {
       ]),
     ));
   }
-  Widget home()=>ListView(padding:const EdgeInsets.fromLTRB(15,12,15,12),children:[
-    Container(height:94,padding:const EdgeInsets.all(9),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFFE7F8FF),Colors.white,Color(0xFFD9F0FF)]),border:Border.all(color:const Color(0xFF91CFFF),width:1.5),borderRadius:const BorderRadius.all(Radius.circular(17))),child:Row(children:[const Icon(Icons.water_drop_rounded,color:Color(0xFF0875E1),size:48),const SizedBox(width:8),Expanded(child:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:2),decoration:BoxDecoration(color:const Color(0xFFFFD83D),borderRadius:const BorderRadius.all(Radius.circular(5))),child:const Text('Ad',style:TextStyle(fontWeight:FontWeight.w900))),const SizedBox(width:6),Expanded(child:Text(tr(widget.language,'ad'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w900)))]),const SizedBox(height:5),Text(tr(widget.language,'adSub'),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))])),const SizedBox(width:6),Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.info_outline,size:17),const SizedBox(height:5),Text(tr(widget.language,'learn'),style:const TextStyle(color:Color(0xFF0756C9),fontSize:10,fontWeight:FontWeight.bold))])])),
-    const SizedBox(height:18),
-    action('milk','milkSub',Icons.local_drink_rounded,const Color(0xFF0875E1),const Color(0xFFDFF1FF)),
-    action('advance','advanceSub',Icons.monetization_on_rounded,const Color(0xFFE2A000),const Color(0xFFFFF2C6)),
-    action('accounts','accountsSub',Icons.receipt_long_rounded,const Color(0xFF079B37),const Color(0xFFE0F8E8)),
-    Container(height:72,decoration:BoxDecoration(borderRadius:const BorderRadius.all(Radius.circular(18)),gradient:const LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0xFFE5FAFF),Color(0xFFBCEBFF),Color(0xFF8ED68B)])),child:const Stack(alignment:Alignment.center,children:[Positioned(left:18,bottom:-10,child:Icon(Icons.grass_rounded,size:64,color:Colors.white)),Icon(Icons.water_drop_rounded,color:Colors.white,size:48),Positioned(right:18,bottom:-10,child:Icon(Icons.grass_rounded,size:64,color:Colors.white))])),
-  ]);
+  Widget home() => FutureBuilder<Map<String, Object?>>(
+    future: _dashboardFuture,
+    builder: (context, snapshot) {
+      final data = snapshot.data;
+      return RefreshIndicator(
+        onRefresh: () async => _refreshDashboard(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(15, 12, 15, 20),
+          children: [
+            Container(
+              height: 94,
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFE7F8FF), Colors.white, Color(0xFFD9F0FF)]),
+                border: Border.all(color: const Color(0xFF91CFFF), width: 1.5),
+                borderRadius: const BorderRadius.all(Radius.circular(17)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.water_drop_rounded, color: Color(0xFF0875E1), size: 48),
+                const SizedBox(width: 8),
+                Expanded(child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: const BoxDecoration(color: Color(0xFFFFD83D), borderRadius: BorderRadius.all(Radius.circular(5))),
+                        child: const Text('Ad', style: TextStyle(fontWeight: FontWeight.w900)),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(tr(widget.language, 'ad'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900))),
+                    ]),
+                    const SizedBox(height: 5),
+                    Text(tr(widget.language, 'adSub'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+                  ],
+                )),
+                const SizedBox(width: 6),
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.info_outline, size: 17),
+                  const SizedBox(height: 5),
+                  Text(tr(widget.language, 'learn'), style: const TextStyle(color: Color(0xFF0756C9), fontSize: 10, fontWeight: FontWeight.bold)),
+                ]),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            if (snapshot.connectionState == ConnectionState.waiting)
+              const LinearProgressIndicator()
+            else if (snapshot.hasError)
+              Card(
+                color: Colors.white,
+                child: ListTile(
+                  leading: const Icon(Icons.error_outline, color: Colors.red),
+                  title: Text(tr(widget.language, 'dashboardError')),
+                  trailing: IconButton(onPressed: _refreshDashboard, icon: const Icon(Icons.refresh)),
+                ),
+              )
+            else if (data != null) ...[
+              _dashboardHeading(tr(widget.language, 'todaySummary'), Icons.today_rounded),
+              Row(children: [
+                Expanded(child: _dashboardMetric(
+                  tr(widget.language, 'todayMilk'),
+                  ((data['today_quantity_grams'] as int) / 1000).toStringAsFixed(3) + ' kg',
+                  Icons.water_drop_rounded, const Color(0xFFDFF1FF), const Color(0xFF0875E1),
+                )),
+                const SizedBox(width: 9),
+                Expanded(child: _dashboardMetric(
+                  tr(widget.language, 'todayAmount'), _money(data['today_amount_paisa']),
+                  Icons.payments_rounded, const Color(0xFFE0F8E8), const Color(0xFF079B37),
+                )),
+              ]),
+              const SizedBox(height: 9),
+              Row(children: [
+                Expanded(child: _dashboardMetric(
+                  tr(widget.language, 'totalAdvance'), _money(data['advance_given_paisa']),
+                  Icons.savings_rounded, const Color(0xFFFFF2C6), const Color(0xFFE2A000),
+                )),
+                const SizedBox(width: 9),
+                Expanded(child: _dashboardMetric(
+                  tr(widget.language, 'remainingAdvance'), _money(data['remaining_advance_paisa']),
+                  Icons.account_balance_wallet_rounded, const Color(0xFFE8E5FF), const Color(0xFF6650B8),
+                )),
+              ]),
+              const SizedBox(height: 17),
+              _dashboardHeading(tr(widget.language, 'monthlySummary'), Icons.calendar_month_rounded),
+              _monthlySummary(data['month_summary'] as Map<String, int>),
+              const SizedBox(height: 17),
+              _dashboardHeading(tr(widget.language, 'dailyMilkList'), Icons.view_day_rounded),
+              _dailyMilkList(data['daily_totals'] as List<Map<String, Object?>>),
+            ],
+            const SizedBox(height: 18),
+            _dashboardHeading(tr(widget.language, 'quickActions'), Icons.dashboard_customize_rounded),
+            action('milk','milkSub',Icons.local_drink_rounded,const Color(0xFF0875E1),const Color(0xFFDFF1FF)),
+            action('advance','advanceSub',Icons.monetization_on_rounded,const Color(0xFFE2A000),const Color(0xFFFFF2C6)),
+            action('accounts','accountsSub',Icons.receipt_long_rounded,const Color(0xFF079B37),const Color(0xFFE0F8E8)),
+            Container(
+              height: 72,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(18)),
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE5FAFF), Color(0xFFBCEBFF), Color(0xFF8ED68B)]),
+              ),
+              child: const Stack(alignment: Alignment.center, children: [
+                Positioned(left: 18, bottom: -10, child: Icon(Icons.grass_rounded, size: 64, color: Colors.white)),
+                Icon(Icons.water_drop_rounded, color: Colors.white, size: 48),
+                Positioned(right: 18, bottom: -10, child: Icon(Icons.grass_rounded, size: 64, color: Colors.white)),
+              ]),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _dashboardHeading(String title, IconData icon) => Padding(
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(children: [
+      Icon(icon, color: const Color(0xFF0649AE)),
+      const SizedBox(width: 7),
+      Expanded(child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF123B65)))),
+    ]),
+  );
+
+  Widget _dashboardMetric(String title, String value, IconData icon, Color tint, Color color) => Container(
+    constraints: const BoxConstraints(minHeight: 104),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(15), border: Border.all(color: color.withOpacity(.35))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: color, size: 23),
+      const SizedBox(height: 7),
+      Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      FittedBox(alignment: AlignmentDirectional.centerStart, fit: BoxFit.scaleDown, child: Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: color))),
+    ]),
+  );
+
+  Widget _monthlySummary(Map<String, int> summary) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFB7D5EF))),
+    child: Column(children: [
+      Row(children: [
+        Expanded(child: _summaryValue(tr(widget.language, 'milkAmount'), _money(summary['milk_amount_paisa']))),
+        Expanded(child: _summaryValue(tr(widget.language, 'monthBalance'), _money(summary['balance_paisa']))),
+      ]),
+      const Divider(height: 22),
+      Row(children: [
+        Expanded(child: _summaryValue(tr(widget.language, 'milkQuantity'), ((summary['milk_quantity_grams'] ?? 0) / 1000).toStringAsFixed(3) + ' kg')),
+        Expanded(child: _summaryValue(tr(widget.language, 'milkEntries'), (summary['milk_entries'] ?? 0).toString())),
+      ]),
+    ]),
+  );
+
+  Widget _summaryValue(String title, String value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF536477))),
+      const SizedBox(height: 4),
+      Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF123B65))),
+    ],
+  );
+
+  Widget _dailyMilkList(List<Map<String, Object?>> rows) {
+    if (rows.isEmpty) {
+      return Card(color: Colors.white, child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(tr(widget.language, 'noDailyMilk')),
+      ));
+    }
+    return Column(children: rows.take(7).map((row) {
+      final day = DateTime.tryParse(row['day'].toString());
+      final label = day == null ? row['day'].toString() : day.day.toString().padLeft(2, '0') + '/' + day.month.toString().padLeft(2, '0') + '/' + day.year.toString();
+      return Card(
+        color: Colors.white,
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 6),
+        child: ListTile(
+          dense: true,
+          leading: const CircleAvatar(backgroundColor: Color(0xFFDFF1FF), child: Icon(Icons.local_drink, color: Color(0xFF0875E1))),
+          title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(((row['quantity_grams'] as int) / 1000).toStringAsFixed(3) + ' kg • ' + row['entries'].toString() + ' ' + tr(widget.language, 'entries')),
+          trailing: Text(_money(row['amount_paisa']), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF079B37))),
+        ),
+      );
+    }).toList());
+  }
+
   Widget action(String title,String sub,IconData icon,Color color,Color tint)=>Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:tint,border:Border.all(color:color,width:1.6),borderRadius:const BorderRadius.all(Radius.circular(23)),boxShadow:const[BoxShadow(color:Color(0x16002D64),blurRadius:5,offset:Offset(0,3))]),child:InkWell(onTap:()=>title=='accounts'?setState(()=>tab=1):title=='milk'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkEntryScreen(language:widget.language))):title=='advance'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>AdvanceScreen(language:widget.language))):title=='ledger'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MonthlyLedgerScreen(language:widget.language))):title=='rates'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>MilkRateScreen(language:widget.language))):title=='naga'?Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>NoMilkScreen(language:widget.language))):ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${tr(widget.language,title)} — ${tr(widget.language,'later')}'))),borderRadius:const BorderRadius.all(Radius.circular(23)),child:Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:17),child:Row(children:[CircleAvatar(radius:30,backgroundColor:color,child:Icon(icon,color:Colors.white,size:33)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(tr(widget.language,title),style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Color(0xFF101820))),Text(tr(widget.language,sub),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:13,color:Color(0xFF24364B)))])),const Icon(Icons.chevron_right_rounded,size:34)]))));
   void menu()=>showModalBottomSheet<void>(context:context,isScrollControlled:true,builder:(ctx)=>Directionality(textDirection:rtl?TextDirection.rtl:TextDirection.ltr,child:SafeArea(child:Container(decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:ListView(shrinkWrap:true,padding:const EdgeInsets.all(12),children:[
     const SizedBox(height:5),
