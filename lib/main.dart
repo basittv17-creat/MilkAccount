@@ -8,6 +8,7 @@ import 'screens/monthly_ledger_screen.dart';
 import 'screens/milk_rate_screen.dart';
 import 'screens/no_milk_screen.dart';
 import 'screens/reports_screen.dart';
+import 'l10n/language_support.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +37,7 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Milk Account', debugShowCheckedModeBanner: false,
     locale: Locale(language.isEmpty ? 'ur' : language),
-    supportedLocales: const [Locale('ur'), Locale('en'), Locale('hi')],
+    supportedLocales: LanguageSupport.activeLocales,
     localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0756C9)), scaffoldBackgroundColor: const Color(0xFFF3F9FF)),
     home: language.isEmpty ? LanguageScreen(onSelect: selectLanguage) : Dashboard(language: language, onLanguage: selectLanguage),
@@ -92,7 +93,7 @@ class Dashboard extends StatefulWidget {
 }
 class _DashboardState extends State<Dashboard> {
   int tab=0;
-  bool get rtl=>widget.language=='ur';
+  bool get rtl=>LanguageSupport.isRtl(widget.language);
   @override
   Widget build(BuildContext context) {
     final labels=['home','accounts','reports','settings'];
