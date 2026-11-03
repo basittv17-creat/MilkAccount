@@ -2,17 +2,248 @@ import 'package:flutter/material.dart';
 import '../data/monthly_ledger_repository.dart';
 
 class MonthlyLedgerScreen extends StatefulWidget {
-  const MonthlyLedgerScreen({super.key,required this.language});
+  const MonthlyLedgerScreen({super.key, required this.language});
   final String language;
-  @override State<MonthlyLedgerScreen> createState()=>_MonthlyLedgerScreenState();
+  @override
+  State<MonthlyLedgerScreen> createState() => _MonthlyLedgerScreenState();
 }
+
 class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
-  final _repo=MonthlyLedgerRepository(); late Future<List<Map<String,Object?>>> _accounts; List<Map<String,Object?>> _rows=[]; String? _id; DateTime _month=DateTime.now();
-  bool get _ur=>widget.language=='ur'; String t(String u,String e,String h)=>_ur?u:widget.language=='hi'?h:e;
-  @override void initState(){super.initState();_accounts=_repo.activeAccounts();}
-  String money(Object? v)=>'Rs. '+(((v as int?)??0)/100).toStringAsFixed(2);
-  InputDecoration dec(String s)=>InputDecoration(labelText:s,filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)));
-  Future<void> pickMonth() async {final d=await showDatePicker(context:context,initialDate:_month,firstDate:DateTime(2000),lastDate:DateTime(2100),initialDatePickerMode:DatePickerMode.year);if(d!=null&&mounted)setState(()=>_month=DateTime(d.year,d.month,1));}
-  Widget metric(String label,Object? value,Color color)=>Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:color,borderRadius:BorderRadius.circular(12)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label,style:const TextStyle(fontSize:12)),const SizedBox(height:5),Text(money(value),style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))]));
-  @override Widget build(BuildContext context)=>Directionality(textDirection:_ur?TextDirection.rtl:TextDirection.ltr,child:Scaffold(backgroundColor:const Color(0xFFF3F9FF),appBar:AppBar(title:Text(t('ماہانہ کھاتہ اور بیلنس','Monthly Ledger & Balance','मासिक खाता और बैलेंस')),backgroundColor:const Color(0xFF0649AE),foregroundColor:Colors.white),body:FutureBuilder<List<Map<String,Object?>>>(future:_accounts,builder:(context,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(s.error.toString()));_rows=s.data??[];if(_rows.isEmpty)return Center(child:Text(t('پہلے نیا کھاتہ بنائیں','Create an account first','पहले खाता बनाएँ')));if(_id==null||!_rows.any((a)=>a['id']==_id))_id=_rows.first['id'] as String;return ListView(padding:const EdgeInsets.all(16),children:[DropdownButtonFormField<String>(value:_id,decoration:dec(t('گاہک کا کھاتہ','Customer account','ग्राहक खाता')),items:_rows.map((a)=>DropdownMenuItem(value:a['id'] as String,child:Text('#'+a['account_number'].toString()+' — '+a['customer_name'].toString()))).toList(),onChanged:(v)=>setState(()=>_id=v)),const SizedBox(height:12),OutlinedButton.icon(onPressed:pickMonth,icon:const Icon(Icons.calendar_month),label:Text(_month.year.toString()+' / '+_month.month.toString().padLeft(2,'0'))),FutureBuilder<Map<String,int>>(future:_repo.summary(accountId:_id!,month:_month),builder:(context,summary){if(summary.connectionState!=ConnectionState.done)return const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator()));if(summary.hasError)return Text(summary.error.toString());final v=summary.data!;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[const SizedBox(height:12),Row(children:[Expanded(child:metric(t('دودھ کی رقم','Milk total','दूध की रकम'),v['milk_total_paisa'],const Color(0xFFDFF1FF))),const SizedBox(width:8),Expanded(child:metric(t('ایڈوانس دیا','Advance given','एडवांस दिया'),v['advance_given_paisa'],const Color(0xFFFFF2C6)))]),const SizedBox(height:8),Row(children:[Expanded(child:metric(t('وصول شدہ رقم','Payments received','प्राप्त भुगतान'),v['payment_received_paisa'],const Color(0xFFE0F8E8))),const SizedBox(width:8),Expanded(child:metric(t('باقی بیلنس','Remaining balance','बाकी बैलेंस'),v['balance_paisa'],const Color(0xFFE8E5FF)))]),const SizedBox(height:12),Text(t('کل دودھ: ','Total milk: ','कुल दूध: ')+( (v['milk_quantity_grams']??0)/1000).toStringAsFixed(3)+' kg   •   '+t('اندراجات: ','Entries: ','एंट्री: ')+(v['milk_entries']??0).toString(),style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:16),Text(t('روزانہ دودھ کی تفصیل','Daily milk details','दैनिक दूध विवरण'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),FutureBuilder<List<Map<String,Object?>>>(future:_repo.entries(accountId:_id!,month:_month),builder:(context,entries){if(entries.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());final list=entries.data??[];if(list.isEmpty)return Padding(padding:const EdgeInsets.all(16),child:Text(t('اس مہینے کوئی دودھ درج نہیں','No milk entries for this month','इस महीने दूध दर्ज नहीं है')));return Column(children:list.map((r){final dt=DateTime.tryParse(r['recorded_at'].toString())?.toLocal();final date=dt==null?'':dt.day.toString()+'/'+dt.month.toString()+'/'+dt.year.toString();final kg=((r['quantity_grams'] as int)/1000).toStringAsFixed(3);return Card(color:Colors.white,child:ListTile(title:Text(date+'  •  '+kg+' kg'),subtitle:Text('FAT: '+((r['fat_value']??'—').toString())),trailing:Text(money(r['total_paisa']),style:const TextStyle(fontWeight:FontWeight.bold))));}).toList());})]);})]);}));
+  final _repo = MonthlyLedgerRepository();
+  late Future<List<Map<String, Object?>>> _accounts;
+  List<Map<String, Object?>> _rows = [];
+  String? _id;
+  DateTime _month = DateTime.now();
+  bool get _ur => widget.language == 'ur';
+  String t(String u, String e, String h) =>
+      _ur ? u : widget.language == 'hi' ? h : e;
+
+  @override
+  void initState() {
+    super.initState();
+    _accounts = _repo.activeAccounts();
+  }
+
+  String money(Object? value) =>
+      'Rs. ' + ((((value as int?) ?? 0) / 100).toStringAsFixed(2));
+
+  InputDecoration dec(String label) => InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      );
+
+  Future<void> pickMonth() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _month,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDatePickerMode: DatePickerMode.year,
+    );
+    if (date != null && mounted) {
+      setState(() => _month = DateTime(date.year, date.month, 1));
+    }
+  }
+
+  Widget metric(String label, Object? value, Color color) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12)),
+            const SizedBox(height: 5),
+            Text(money(value),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF3F9FF),
+        appBar: AppBar(
+          title: Text(t('ماہانہ کھاتہ اور بیلنس', 'Monthly Ledger & Balance',
+              'मासिक खाता और बैलेंस')),
+          backgroundColor: const Color(0xFF0649AE),
+          foregroundColor: Colors.white,
+        ),
+        body: FutureBuilder<List<Map<String, Object?>>>(
+          future: _accounts,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text(snapshot.error.toString()));
+            }
+            _rows = snapshot.data ?? [];
+            if (_rows.isEmpty) {
+              return Center(child: Text(t('پہلے نیا کھاتہ بنائیں',
+                  'Create an account first', 'पहले खाता बनाएँ')));
+            }
+            if (_id == null || !_rows.any((a) => a['id'] == _id)) {
+              _id = _rows.first['id'] as String;
+            }
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _id,
+                  decoration: dec(t(
+                      'گاہک کا کھاتہ', 'Customer account', 'ग्राहक खाता')),
+                  items: _rows
+                      .map((account) => DropdownMenuItem(
+                            value: account['id'] as String,
+                            child: Text('#' +
+                                account['account_number'].toString() +
+                                ' — ' +
+                                account['customer_name'].toString()),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() => _id = value),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: pickMonth,
+                  icon: const Icon(Icons.calendar_month),
+                  label: Text(_month.year.toString() +
+                      ' / ' +
+                      _month.month.toString().padLeft(2, '0')),
+                ),
+                FutureBuilder<Map<String, int>>(
+                  future: _repo.summary(accountId: _id!, month: _month),
+                  builder: (context, summary) {
+                    if (summary.connectionState != ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (summary.hasError) {
+                      return Text(summary.error.toString());
+                    }
+                    final values = summary.data!;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                              child: metric(
+                                  t('دودھ کی رقم', 'Milk total', 'दूध की रकम'),
+                                  values['milk_total_paisa'],
+                                  const Color(0xFFDFF1FF))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: metric(
+                                  t('ایڈوانس دیا', 'Advance given',
+                                      'एडवांस दिया'),
+                                  values['advance_given_paisa'],
+                                  const Color(0xFFFFF2C6))),
+                        ]),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          Expanded(
+                              child: metric(
+                                  t('وصول شدہ رقم', 'Payments received',
+                                      'प्राप्त भुगतान'),
+                                  values['payment_received_paisa'],
+                                  const Color(0xFFE0F8E8))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: metric(
+                                  t('باقی بیلنس', 'Remaining balance',
+                                      'बाकी बैलेंस'),
+                                  values['balance_paisa'],
+                                  const Color(0xFFE8E5FF))),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text(
+                          t('کل دودھ: ', 'Total milk: ', 'कुल दूध: ') +
+                              ((values['milk_quantity_grams'] ?? 0) / 1000)
+                                  .toStringAsFixed(3) +
+                              ' kg   •   ' +
+                              t('اندراجات: ', 'Entries: ', 'एंट्री: ') +
+                              (values['milk_entries'] ?? 0).toString(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                            t('روزانہ دودھ کی تفصیل', 'Daily milk details',
+                                'दैनिक दूध विवरण'),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        FutureBuilder<List<Map<String, Object?>>>(
+                          future:
+                              _repo.entries(accountId: _id!, month: _month),
+                          builder: (context, entries) {
+                            if (entries.connectionState !=
+                                ConnectionState.done) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+                            if (entries.hasError) {
+                              return Text(entries.error.toString());
+                            }
+                            final list = entries.data ?? [];
+                            if (list.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(t(
+                                    'اس مہینے کوئی دودھ درج نہیں',
+                                    'No milk entries for this month',
+                                    'इस महीने दूध दर्ज नहीं है')),
+                              );
+                            }
+                            return Column(
+                              children: list.map((row) {
+                                final dateTime = DateTime.tryParse(
+                                        row['recorded_at'].toString())
+                                    ?.toLocal();
+                                final date = dateTime == null
+                                    ? ''
+                                    : dateTime.day.toString() +
+                                        '/' +
+                                        dateTime.month.toString() +
+                                        '/' +
+                                        dateTime.year.toString();
+                                final kg =
+                                    ((row['quantity_grams'] as int) / 1000)
+                                        .toStringAsFixed(3);
+                                return Card(
+                                  color: Colors.white,
+                                  child: ListTile(
+                                    title: Text(date + '  •  ' + kg + ' kg'),
+                                    subtitle: Text('FAT: ' +
+                                        (row['fat_value'] ?? '—').toString()),
+                                    trailing: Text(money(row['total_paisa']),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
