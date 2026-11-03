@@ -14,25 +14,84 @@ class MilkRateRepository {
     );
   }
 
+  /// Changes only existing milk entries in the selected calendar month.
+  /// Account default rates and entries in every other month remain untouched.
+  Future<int> updateMonthEntries({
+    required List<String> accountIds,
+    required DateTime month,
+    required int ratePaisaPerKg,
+  }) async {
+    _validate(accountIds, ratePaisaPerKg);
+    final start = DateTime.utc(month.year, month.month, 1).toIso8601String();
+    final end = DateTime.utc(month.year, month.month + 1, 1).toIso8601String();
+    final db = await _database.database;
+    return db.transaction((txn) async {
+      var changed = 0;
+      for (final id in accountIds) {
+        changed += await txn.rawUpdate(
+          '''UPDATE milk_entries
+             SET rate_paisa_per_kg = ?,
+                 total_paisa = CAST((quantity_grams * ? + 500) / 1000 AS INTEGER),
+                 updated_at = ?
+             WHERE account_id = ? AND recorded_at >= ? AND recorded_at < ?''',
+          [
+            ratePaisaPerKg,
+            ratePaisaPerKg,
+            DateTime.now().toUtc().toIso8601String(),
+            id,
+            start,
+            end,
+          ],
+        );
+      }
+      return changed;
+    });
+  }
+
+  /// Changes account defaults only; saved historical entries are immutable.
+  Future<int> updateFutureRate({
+    required List<String> accountIds,
+    required int ratePaisaPerKg,
+  }) async {
+    _validate(accountIds, ratePaisaPerKg);
+    final db = await _database.database;
+    return db.transaction((txn) async {
+      var changed = 0;
+      for (final id in accountIds) {
+        changed += await txn.update(
+          'accounts',
+          {
+            'milk_rate_paisa': ratePaisaPerKg,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          },
+          where: 'id = ? AND is_active = 1',
+          whereArgs: [id],
+        );
+      }
+      return changed;
+    });
+  }
+
+  void _validate(List<String> accountIds, int ratePaisaPerKg) {
+    if (accountIds.isEmpty || accountIds.any((id) => id.trim().isEmpty)) {
+      throw ArgumentError('Select at least one valid account');
+    }
+    if (ratePaisaPerKg < 0 || ratePaisaPerKg > 100000000) {
+      throw ArgumentError.value(
+        ratePaisaPerKg,
+        'ratePaisaPerKg',
+        'Rate must be between 0 and 1,000,000 rupees',
+      );
+    }
+  }
+
   Future<int> updateRate({
     required String accountId,
     required int ratePaisaPerKg,
   }) async {
-    if (accountId.trim().isEmpty) {
-      throw ArgumentError.value(accountId, 'accountId', 'Account is required');
-    }
-    if (ratePaisaPerKg < 0 || ratePaisaPerKg > 100000000) {
-      throw ArgumentError.value(ratePaisaPerKg, 'ratePaisaPerKg',
-          'Rate must be between 0 and 1,000,000 rupees');
-    }
-    return (await _database.database).update(
-      'accounts',
-      {
-        'milk_rate_paisa': ratePaisaPerKg,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      where: 'id = ? AND is_active = 1',
-      whereArgs: [accountId],
+    return updateFutureRate(
+      accountIds: [accountId],
+      ratePaisaPerKg: ratePaisaPerKg,
     );
   }
 }
