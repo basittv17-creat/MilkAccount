@@ -25,6 +25,18 @@ jobs:
         run: bash tool/prepare_platforms.sh
       - name: Install dependencies
         run: flutter pub get
+      # telephony_sms 0.1.0 pins AGP 9.3.1, which triggers an Android
+      # library source-set ClassCastException. AGP 9.1.1 avoids that regression.
+      - name: Use compatible Android Gradle Plugin for telephony_sms
+        run: |
+          PLUGIN_GRADLE="$(find "$HOME/.pub-cache" -path '*/telephony_sms-0.1.0/android/build.gradle.kts' -print -quit)"
+          if [[ -z "$PLUGIN_GRADLE" ]]; then
+            echo "Could not locate telephony_sms 0.1.0 Android Gradle file" >&2
+            exit 1
+          fi
+          grep -q 'com.android.tools.build:gradle:9.3.1' "$PLUGIN_GRADLE"
+          sed -i 's/com.android.tools.build:gradle:9.3.1/com.android.tools.build:gradle:9.1.1/' "$PLUGIN_GRADLE"
+          grep -q 'com.android.tools.build:gradle:9.1.1' "$PLUGIN_GRADLE"
       - name: Format Dart source
         run: dart format .
       - name: Analyze
