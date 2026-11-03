@@ -19,6 +19,8 @@ void main() {
     SharedPreferences.setMockInitialValues({'app_language': 'ur'});
     final preferences = await SharedPreferences.getInstance();
     await tester.pumpWidget(MilkAccountApp(preferences: preferences));
+    expect(find.text('ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2700));
     expect(find.text('دودھ کا اندراج'), findsOneWidget);
     expect(find.text('ایڈوانس'), findsOneWidget);
     expect(find.text('کھاتے'), findsNWidgets(2));
@@ -28,6 +30,8 @@ void main() {
     SharedPreferences.setMockInitialValues({'app_language': 'hi'});
     final preferences = await SharedPreferences.getInstance();
     await tester.pumpWidget(MilkAccountApp(preferences: preferences));
+    expect(find.text('ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2700));
     expect(find.text('दूध की एंट्री'), findsOneWidget);
     expect(find.text('एडवांस'), findsOneWidget);
     expect(find.text('खाते'), findsNWidgets(2));
