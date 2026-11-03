@@ -45,15 +45,19 @@ class NoMilkRepository {
     if (account.isEmpty) {
       throw ArgumentError.value(accountId, 'accountId', 'Active account not found');
     }
-    final normalizedDay = DateTime.utc(day.year, day.month, day.day)
-        .toIso8601String();
+    // The selected day is a local calendar day; convert its boundaries to UTC
+    // before comparing with UTC timestamps stored in milk_entries.
+    final startLocal = DateTime(day.year, day.month, day.day);
+    final endLocal = startLocal.add(const Duration(days: 1));
+    final normalizedDay =
+        DateTime.utc(day.year, day.month, day.day).toIso8601String();
     final existingMilk = await db.query('milk_entries',
         columns: ['id'],
         where: 'account_id = ? AND recorded_at >= ? AND recorded_at < ?',
         whereArgs: [
           accountId,
-          normalizedDay,
-          DateTime.utc(day.year, day.month, day.day + 1).toIso8601String()
+          startLocal.toUtc().toIso8601String(),
+          endLocal.toUtc().toIso8601String(),
         ],
         limit: 1);
     if (existingMilk.isNotEmpty) {

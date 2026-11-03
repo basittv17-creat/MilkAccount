@@ -24,4 +24,40 @@ void main() {
     expect(result['milk_quantity_grams'], 2000);
     await AppDatabase.instance.close();
   });
+  test('monthly ledger includes records by device-local month boundaries', () async {
+    await AccountRepository().createAccount(
+      customerName: 'Local Time Ledger Boundary',
+      startAt: DateTime(2097, 12, 1),
+      milkRatePaisa: 10000,
+    );
+    final db = await AppDatabase.instance.database;
+    final account = (await db.query('accounts',
+      where: 'customer_name = ?', whereArgs: ['Local Time Ledger Boundary'])).single;
+    final id = account['id'] as String;
+    final repository = MilkEntryRepository();
+    await repository.createEntry(
+      accountId: id,
+      recordedAt: DateTime(2097, 12, 31, 23, 30),
+      quantityGrams: 1000,
+      ratePaisaPerKg: 10000,
+    );
+    await repository.createEntry(
+      accountId: id,
+      recordedAt: DateTime(2098, 1, 1, 0, 15),
+      quantityGrams: 2000,
+      ratePaisaPerKg: 10000,
+    );
+    final ledger = MonthlyLedgerRepository();
+    final summary = await ledger.summary(
+      accountId: id,
+      month: DateTime(2097, 12),
+    );
+    expect(summary['milk_entries'], 1);
+    expect(summary['milk_quantity_grams'], 1000);
+    expect(await ledger.entries(
+      accountId: id,
+      month: DateTime(2097, 12),
+    ), hasLength(1));
+    await AppDatabase.instance.close();
+  });
 }

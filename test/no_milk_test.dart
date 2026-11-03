@@ -64,4 +64,30 @@ void main() {
     );
     await AppDatabase.instance.close();
   });
+  test('no-milk conflict check uses the selected device-local calendar day', () async {
+    await AccountRepository().createAccount(
+      customerName: 'Local Day Naga Boundary',
+      startAt: DateTime(2098, 2, 1),
+      milkRatePaisa: 10000,
+    );
+    final db = await AppDatabase.instance.database;
+    final account = (await db.query('accounts',
+      where: 'customer_name = ?', whereArgs: ['Local Day Naga Boundary'])).single;
+    final id = account['id'] as String;
+    await MilkEntryRepository().createEntry(
+      accountId: id,
+      recordedAt: DateTime(2098, 2, 12, 23, 45),
+      quantityGrams: 1000,
+      ratePaisaPerKg: 10000,
+    );
+    await expectLater(
+      NoMilkRepository().markNoMilk(
+        accountId: id,
+        day: DateTime(2098, 2, 12),
+        recordedTime: '23:50',
+      ),
+      throwsStateError,
+    );
+    await AppDatabase.instance.close();
+  });
 }

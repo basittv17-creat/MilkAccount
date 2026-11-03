@@ -80,12 +80,13 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
   }
 
   void _openAccount(Map<String, Object?> account) {
+    final now = DateTime.now();
     setState(() {
       _selected = account;
       _quantity.clear();
       _fat.text = (account['fat_enabled'] as int? ?? 0) == 1 ? '4.5' : '';
       _note.clear();
-      _recordedAt = DateTime(_date.year, _date.month, _date.day, DateTime.now().hour, DateTime.now().minute);
+      _recordedAt = DateTime(_date.year, _date.month, _date.day, now.hour, now.minute);
     });
   }
 

@@ -115,8 +115,12 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
             final given = row['direction'] == 'given_to_customer';
             final dt = DateTime.tryParse(row['recorded_at'].toString())?.toLocal();
             final date = dt == null ? '' : '${dt.day}/${dt.month}/${dt.year}';
+            final time = dt == null
+                ? ''
+                : '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            final dateTime = dt == null ? '' : '$date • $time';
             final note = (row['note'] as String?) ?? '';
-            return Card(color: Colors.white, child: ListTile(leading: Icon(given ? Icons.call_made : Icons.call_received), title: Text(given ? t('گاہک کو ایڈوانس دیا', 'Advance given', 'एडवांस दिया') : t('گاہک سے رقم وصول', 'Payment received', 'रकम प्राप्त')), subtitle: Text(note.isEmpty ? date : '$date • $note'), trailing: Text(money(row['amount_paisa']))));
+            return Card(color: Colors.white, child: ListTile(leading: Icon(given ? Icons.call_made : Icons.call_received), title: Text(given ? t('گاہک کو ایڈوانس دیا', 'Advance given', 'एडवांस दिया') : t('گاہک سے رقم وصول', 'Payment received', 'रकम प्राप्त')), subtitle: Text(note.isEmpty ? dateTime : '$dateTime • $note'), trailing: Text(money(row['amount_paisa']))));
           }).toList());
         }),
       ]);

@@ -220,6 +220,11 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
                                         dateTime.month.toString() +
                                         '/' +
                                         dateTime.year.toString();
+                                final time = dateTime == null
+                                    ? ''
+                                    : dateTime.hour.toString().padLeft(2, '0') +
+                                        ':' +
+                                        dateTime.minute.toString().padLeft(2, '0');
                                 final kg =
                                     ((row['quantity_grams'] as int) / 1000)
                                         .toStringAsFixed(3);
@@ -227,7 +232,7 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
                                   color: Colors.white,
                                   child: ListTile(
                                     title: Text(date + '  •  ' + kg + ' kg'),
-                                    subtitle: Text('FAT: ' +
+                                    subtitle: Text(time + '  •  FAT: ' +
                                         (row['fat_value'] ?? '—').toString()),
                                     trailing: Text(money(row['total_paisa']),
                                         style: const TextStyle(
