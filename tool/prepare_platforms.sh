@@ -25,6 +25,12 @@ if [[ -f "$APP_GRADLE" ]]; then
   fi
 fi
 
+# Add the runtime permission required for explicitly opted-in direct SMS sending.
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.SEND_SMS' "$MANIFEST"; then
+  sed -i '/<application/i\\    <uses-permission android:name="android.permission.SEND_SMS" />\\n    <uses-feature android:name="android.hardware.telephony" android:required="false" />' "$MANIFEST"
+fi
+
 # Fail early if the generated application Gradle file did not receive API 36.
 if [[ ! -f "$APP_GRADLE" ]] || ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
   echo "Android app compileSdk must be 36; generated configuration is not correct." >&2
