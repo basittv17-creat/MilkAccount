@@ -9,6 +9,7 @@ import 'screens/milk_rate_screen.dart';
 import 'screens/no_milk_screen.dart';
 import 'screens/reports_screen.dart';
 import 'l10n/language_support.dart';
+import 'screens/backup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -14,9 +14,13 @@ class AppDatabase {
     return _database!;
   }
 
-  Future<Database> _open() async {
+  Future<String> getDatabasePath() async {
     final root = await getDatabasesPath();
-    final path = p.join(root, 'milk_account.db');
+    return p.join(root, 'milk_account.db');
+  }
+
+  Future<Database> _open() async {
+    final path = await getDatabasePath();
     return openDatabase(
       path,
       version: schemaVersion,
