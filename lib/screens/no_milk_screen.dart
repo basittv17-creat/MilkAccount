@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:telephony_sms/telephony_sms.dart';
 import '../data/no_milk_repository.dart';
 
 class NoMilkScreen extends StatefulWidget {
@@ -16,6 +19,10 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   List<Map<String, Object?>> _rows = [];
   final Set<String> _selectedIds = {};
   DateTime _day = DateTime.now();
+  TimeOfDay _time = TimeOfDay.now();
+  bool _sendSms = false;
+  bool _sendWhatsApp = false;
+  final TelephonySMS _telephonySms = TelephonySMS();
   bool _saving = false;
   bool _showDetails = false;
 
@@ -33,6 +40,63 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _time);
+    if (picked != null && mounted) setState(() => _time = picked);
+  }
+
+  String _phone(Map<String, Object?> row) {
+    final code = (row['country_code'] as String? ?? '+92').replaceAll(RegExp(r'[^0-9+]'), '');
+    final number = (row['phone_number'] as String? ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (number.isEmpty) return '';
+    if (number.startsWith('0')) return '$code${number.substring(1)}';
+    if (number.startsWith('92')) return '+$number';
+    return '$code$number';
+  }
+
+  String _nagaMessage(Map<String, Object?> row) => t(
+    'محترم ${row['customer_name']}، ${_day.day}/${_day.month}/${_day.year} کو دودھ نہیں آیا، اس لیے آج ناگا درج کیا گیا۔',
+    'Dear ${row['customer_name']}, no milk was received on ${_day.day}/${_day.month}/${_day.year}. A no-milk day has been recorded.',
+    'प्रिय ${row['customer_name']}, ${_day.day}/${_day.month}/${_day.year} को दूध नहीं आया, इसलिए नागा दर्ज किया गया।',
+  );
+
+  Future<void> _sendNotifications(List<Map<String, Object?>> savedRows) async {
+    if (!_sendSms && !_sendWhatsApp) return;
+    final errors = <String>[];
+    if (_sendSms && Platform.isAndroid) {
+      try {
+        final granted = await _telephonySms.requestPermission();
+        if (!granted) {
+          errors.add(t('SMS کی اجازت نہیں ملی', 'SMS permission was not granted', 'SMS अनुमति नहीं मिली'));
+        } else {
+          for (final row in savedRows) {
+            final phone = _phone(row);
+            if (phone.isEmpty) { errors.add('${row['customer_name']}: ${t('فون نمبر موجود نہیں', 'No phone number', 'फोन नंबर नहीं है')}'); continue; }
+            try { await _telephonySms.sendSMS(phone: phone, message: _nagaMessage(row)); }
+            catch (error) { errors.add('${row['customer_name']}: SMS $error'); }
+          }
+        }
+      } catch (error) { errors.add('SMS: $error'); }
+    } else if (_sendSms && !Platform.isAndroid) {
+      errors.add(t('براہ راست SMS صرف Android پر دستیاب ہے', 'Direct SMS is available on Android only', 'सीधा SMS केवल Android पर उपलब्ध है'));
+    }
+    if (_sendWhatsApp) {
+      for (final row in savedRows) {
+        final phone = _phone(row).replaceAll(RegExp(r'[^0-9]'), '');
+        if (phone.isEmpty) { errors.add('${row['customer_name']}: ${t('فون نمبر موجود نہیں', 'No phone number', 'फोन नंबर नहीं है')}'); continue; }
+        final uri = Uri.https('wa.me', '/$phone', {'text': _nagaMessage(row)});
+        try {
+          final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (!opened) errors.add('${row['customer_name']}: WhatsApp could not be opened');
+          if (savedRows.length > 1) await Future<void>.delayed(const Duration(seconds: 2));
+        } catch (error) { errors.add('${row['customer_name']}: WhatsApp $error'); }
+      }
+    }
+    if (errors.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errors.take(3).join('\n')), duration: const Duration(seconds: 6)));
+    }
   }
 
   Future<void> _pickDate() async {
@@ -61,6 +125,7 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
     if (_selectedIds.isEmpty || _saving) return;
     setState(() => _saving = true);
     var saved = 0;
+    final savedRows = <Map<String, Object?>>[];
     final failures = <String>[];
     for (final row in _rows) {
       final id = row['id'] as String;
@@ -69,12 +134,14 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
       try {
         await _repo.markNoMilk(accountId: id, day: _day, note: _note.text);
         saved++;
+        savedRows.add(row);
       } catch (error) {
         failures.add('$name: ${error is StateError ? error.message : error}');
       }
     }
     if (!mounted) return;
     setState(() => _saving = false);
+    if (saved > 0) await _sendNotifications(savedRows);
     if (saved > 0 && failures.isEmpty) {
       _note.clear();
       setState(() {
@@ -349,6 +416,15 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          Text(t('وقت', 'Time', 'समय'), style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          OutlinedButton.icon(
+            onPressed: _pickTime,
+            icon: const Icon(Icons.access_time, color: Color(0xFF0756C9)),
+            label: Text(_time.format(context)),
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), foregroundColor: Colors.black87, backgroundColor: Colors.white, side: const BorderSide(color: Color(0xFF9CC9ED))),
+          ),
+          const SizedBox(height: 14),
           TextFormField(
             controller: _note,
             maxLines: 2,
@@ -358,7 +434,24 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
               suffixIcon: const Icon(Icons.edit, color: Color(0xFF0756C9)),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            value: _sendSms,
+            onChanged: (value) => setState(() => _sendSms = value ?? false),
+            activeColor: const Color(0xFF08A832),
+            secondary: const Icon(Icons.sms, color: Color(0xFF0756C9)),
+            title: Text(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें')),
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _sendWhatsApp,
+            onChanged: (value) => setState(() => _sendWhatsApp = value ?? false),
+            activeColor: const Color(0xFF08A832),
+            secondary: const Icon(Icons.chat, color: Color(0xFF168B45)),
+            title: Text(t('WhatsApp پر بھیجیں', 'Send on WhatsApp', 'WhatsApp पर भेजें')),
+            contentPadding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
