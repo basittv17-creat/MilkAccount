@@ -35,7 +35,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<({Uint8List pdf, String message})> _reportData() async {
+  Future<({Uint8List pdf, String message, Map<String, int> summary, List<Map<String, Object?>> customers, List<Map<String, Object?>> daily, String period})> _reportData() async {
     final summary = await _repo.summary(_month);
     final customers = await _repo.customerTotals(_month);
     final daily = await _repo.dailyTotals(_month);
@@ -63,7 +63,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       title: 'Milk Account — Monthly Report',
       lines: lines,
     );
-    return (pdf: pdf, message: message);
+    return (pdf: pdf, message: message, summary: summary, customers: customers, daily: daily, period: period);
   }
 
   Future<void> _runExport(String action) async {
@@ -76,6 +76,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final period =
             '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
         await _export.sharePdf(data.pdf, 'milk-account-$period.pdf');
+      } else if (action == 'excel') {
+        final bytes = _export.createExcelReport(
+          period: data.period,
+          summary: data.summary,
+          customers: data.customers,
+          daily: data.daily,
+        );
+        await _export.shareExcel(bytes, 'milk-account-${data.period}.xlsx');
       } else if (action == 'sms') {
         final ok = await _export.sendSms(data.message);
         if (!ok && mounted) {
@@ -156,6 +164,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _exportButton('print', t('پرنٹ', 'Print', 'प्रिंट'), Icons.print, const Color(0xFF0756C9)),
               ]),
               Row(children: [
+                _exportButton('excel', t('Excel ایکسپورٹ', 'Export Excel', 'Excel निर्यात'), Icons.table_chart, const Color(0xFF16834A)),
+                const SizedBox(width: 5),
                 _exportButton('sms', t('SMS', 'SMS', 'SMS'), Icons.sms, const Color(0xFF079B37)),
                 const SizedBox(width: 5),
                 _exportButton('whatsapp', t('واٹس ایپ', 'WhatsApp', 'WhatsApp'), Icons.chat, const Color(0xFF168B45)),

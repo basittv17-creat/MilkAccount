@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:excel/excel.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -30,6 +32,77 @@ class ReportExportService {
       ),
     );
     return document.save();
+  }
+
+  Uint8List createExcelReport({
+    required String period,
+    required Map<String, int> summary,
+    required List<Map<String, Object?>> customers,
+    required List<Map<String, Object?>> daily,
+  }) {
+    final workbook = Excel.createExcel();
+    final summarySheet = workbook['Summary'];
+    summarySheet.appendRow([TextCellValue('Milk Account Monthly Report')]);
+    summarySheet.appendRow([TextCellValue('Period'), TextCellValue(period)]);
+    summarySheet.appendRow([TextCellValue('Metric'), TextCellValue('Value')]);
+    final metrics = <(String, int)>[
+      ('Milk amount (Rs.)', summary['milk_amount_paisa'] ?? 0),
+      ('Balance (Rs.)', summary['balance_paisa'] ?? 0),
+      ('Advance given (Rs.)', summary['advance_given_paisa'] ?? 0),
+      ('Payments received (Rs.)', summary['payment_received_paisa'] ?? 0),
+      ('Milk quantity (kg)', summary['milk_quantity_grams'] ?? 0),
+      ('Milk entries', summary['milk_entries'] ?? 0),
+      ('No-milk days', summary['no_milk_days'] ?? 0),
+    ];
+    for (final metric in metrics) {
+      final isQuantity = metric.$1 == 'Milk quantity (kg)';
+      final value = isQuantity
+          ? DoubleCellValue(metric.$2 / 1000)
+          : metric.$1.endsWith('(Rs.)')
+              ? DoubleCellValue(metric.$2 / 100)
+              : IntCellValue(metric.$2);
+      summarySheet.appendRow([TextCellValue(metric.$1), value]);
+    }
+
+    final customerSheet = workbook['Customer Totals'];
+    customerSheet.appendRow([
+      TextCellValue('Account #'), TextCellValue('Customer'),
+      TextCellValue('Milk amount (Rs.)'), TextCellValue('Quantity (kg)'),
+      TextCellValue('Entries'),
+    ]);
+    for (final row in customers) {
+      customerSheet.appendRow([
+        IntCellValue((row['account_number'] as int?) ?? 0),
+        TextCellValue((row['customer_name'] ?? '').toString()),
+        DoubleCellValue(((row['amount_paisa'] as int?) ?? 0) / 100),
+        DoubleCellValue(((row['quantity_grams'] as int?) ?? 0) / 1000),
+        IntCellValue((row['entries'] as int?) ?? 0),
+      ]);
+    }
+
+    final dailySheet = workbook['Daily Totals'];
+    dailySheet.appendRow([
+      TextCellValue('Date'), TextCellValue('Milk amount (Rs.)'),
+      TextCellValue('Quantity (kg)'), TextCellValue('Entries'),
+    ]);
+    for (final row in daily) {
+      dailySheet.appendRow([
+        TextCellValue((row['day'] ?? '').toString()),
+        DoubleCellValue(((row['amount_paisa'] as int?) ?? 0) / 100),
+        DoubleCellValue(((row['quantity_grams'] as int?) ?? 0) / 1000),
+        IntCellValue((row['entries'] as int?) ?? 0),
+      ]);
+    }
+    final bytes = workbook.save();
+    if (bytes == null) throw StateError('Could not create Excel workbook');
+    return Uint8List.fromList(bytes);
+  }
+
+  Future<void> shareExcel(Uint8List bytes, String filename) async {
+    await Share.shareXFiles(
+      [XFile.fromData(bytes, name: filename, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
+      subject: filename,
+    );
   }
 
   Future<void> printPdf(Uint8List bytes) async {
