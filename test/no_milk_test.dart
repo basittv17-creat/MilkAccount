@@ -91,3 +91,59 @@ void main() {
     await AppDatabase.instance.close();
   });
 }
+
+  test('records a no-milk day for multiple selected accounts on the same date', () async {
+    final accounts = AccountRepository();
+    await accounts.createAccount(
+      customerName: 'Multi Naga Customer Alpha',
+      startAt: DateTime(2026, 11, 1),
+      milkRatePaisa: 10000,
+    );
+    await accounts.createAccount(
+      customerName: 'Multi Naga Customer Beta',
+      startAt: DateTime(2026, 11, 1),
+      milkRatePaisa: 10000,
+    );
+
+    final db = await AppDatabase.instance.database;
+    final first = (await db.query(
+      'accounts',
+      columns: ['id'],
+      where: 'customer_name = ?',
+      whereArgs: ['Multi Naga Customer Alpha'],
+    )).single['id'] as String;
+    final second = (await db.query(
+      'accounts',
+      columns: ['id'],
+      where: 'customer_name = ?',
+      whereArgs: ['Multi Naga Customer Beta'],
+    )).single['id'] as String;
+
+    final repository = NoMilkRepository();
+    await repository.markNoMilk(
+      accountId: first,
+      day: DateTime(2026, 11, 4),
+      note: 'Route closed',
+      recordedTime: '07:45',
+    );
+    await repository.markNoMilk(
+      accountId: second,
+      day: DateTime(2026, 11, 4),
+      note: 'Route closed',
+      recordedTime: '07:45',
+    );
+
+    final savedRows = await db.query(
+      'no_milk_days',
+      where: 'account_id IN (?, ?) AND day = ?',
+      whereArgs: [
+        first,
+        second,
+        DateTime.utc(2026, 11, 4).toIso8601String(),
+      ],
+    );
+    expect(savedRows, hasLength(2));
+    expect(savedRows.map((row) => row['recorded_time']).toSet(), {'07:45'});
+    expect(savedRows.map((row) => row['note']).toSet(), {'Route closed'});
+    await AppDatabase.instance.close();
+  });
