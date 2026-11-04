@@ -140,7 +140,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
         textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-        SafeArea(top: false, child: child: Scaffold(
+        child: SafeArea(top: false, child: Scaffold(
           backgroundColor: const Color(0xFFF3F9FF),
           appBar: AppBar(
             title: Text(t('رپورٹس', 'Reports', 'रिपोर्ट')),
