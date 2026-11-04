@@ -680,7 +680,7 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    SafeArea(top: false, child: child: Scaffold(
+    child: SafeArea(top: false, child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
         title: Text(t('ماہانہ حساب', 'Monthly Ledger', 'मासिक खाता')),
