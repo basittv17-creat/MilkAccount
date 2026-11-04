@@ -47,11 +47,15 @@ jobs:
         run: flutter build apk --release
       - name: Build Web
         run: flutter build web --release
-      - name: Upload build artifacts
+      - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: milk-account-phase-1-builds
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/web/
+          name: milk-account-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: milk-account-web-build
+          path: build/web/
           if-no-files-found: error
