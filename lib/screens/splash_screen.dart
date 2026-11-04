@@ -174,8 +174,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           Text(
             language == 'en' ? 'Milk accounting, made easy' : language == 'hi' ? 'दूध का हिसाब, अब आसान' : 'دودھ کا حساب، اب آسان',
             textAlign: TextAlign.center,
-            textDirection: TextDirection.rtl,
-            style: TextStyle(fontFamily: 'NotoNaskhArabic', color: const Color(0xFF06377C), fontSize: compact ? 23 : 27, fontWeight: FontWeight.w800, height: 1.15),
+            textDirection: language == 'ur' ? TextDirection.rtl : TextDirection.ltr,
+            style: TextStyle(fontFamily: language == 'ur' ? 'NotoNaskhArabic' : null, color: const Color(0xFF06377C), fontSize: compact ? 23 : 27, fontWeight: FontWeight.w800, height: 1.15),
           ),
           const SizedBox(height: 2),
           Text(
