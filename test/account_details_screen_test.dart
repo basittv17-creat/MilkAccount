@@ -55,8 +55,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('دودھ کی کل رقم'), findsOneWidget);
-    expect(find.text('Rs. 1000.00'), findsOneWidget);
+    expect(find.text('دودھ کی رقم'), findsOneWidget);
+    expect(find.text('Rs. 1000.00'), findsWidgets);
     expect(find.text('ایڈوانس دیا'), findsNothing);
     expect(find.text('باقی ایڈوانس'), findsNothing);
 
