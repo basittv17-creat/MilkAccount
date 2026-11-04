@@ -33,15 +33,6 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
   void _load() => _accounts = _repo.activeAccounts();
   String _money(Object? paisa) => 'Rs. ${((((paisa as int?) ?? 0) / 100).toStringAsFixed(2))}';
 
-  String _monthLabel() {
-    const urMonths = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
-    const enMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const hiMonths = ['जनवरी','फ़रवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर'];
-    final names = _ur ? urMonths : widget.language == 'hi' ? hiMonths : enMonths;
-    return '${names[_month.month - 1]} ${_month.year}';
-  }
-
-
   String _monthName(int month) {
     const urMonths = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
     const enMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
