@@ -32,3 +32,7 @@ flutter:
     - assets/images/milk_account_dairy_hero.jpg
     - assets/images/milk_account_logo.png
     - assets/fonts/NotoNaskhArabic[wght].ttf
+  fonts:
+    - family: NotoNaskhArabic
+      fonts:
+        - asset: assets/fonts/NotoNaskhArabic[wght].ttf

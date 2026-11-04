@@ -40,7 +40,6 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
     if (mounted) {
       setState(() {
         language = value;
-        splashComplete = false;
       });
     }
   }
@@ -52,13 +51,13 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
     supportedLocales: LanguageSupport.activeLocales,
     localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0756C9)), scaffoldBackgroundColor: const Color(0xFFF3F9FF)),
-    home: language.isEmpty
-      ? LanguageScreen(onSelect: selectLanguage)
-      : splashComplete
-        ? Dashboard(language: language, onLanguage: selectLanguage)
-        : SplashScreen(onFinished: () {
-            if (mounted) setState(() => splashComplete = true);
-          }),
+    home: !splashComplete
+      ? SplashScreen(onFinished: () {
+          if (mounted) setState(() => splashComplete = true);
+        })
+      : language.isEmpty
+        ? LanguageScreen(onSelect: selectLanguage)
+        : Dashboard(language: language, onLanguage: selectLanguage),
   );
 }
 
