@@ -140,4 +140,67 @@ void main() {
     await AppDatabase.instance.close();
   });
 
+
+  test('from-month rate change updates later entries and the future account rate', () async {
+    final accounts = AccountRepository();
+    await accounts.createAccount(
+      customerName: 'From Month Forward Customer',
+      startAt: DateTime(2025, 12, 1),
+      milkRatePaisa: 10000,
+    );
+    final db = await AppDatabase.instance.database;
+    final account = (await db.query(
+      'accounts',
+      where: 'customer_name = ?',
+      whereArgs: ['From Month Forward Customer'],
+    )).single;
+    final id = account['id'] as String;
+    final entries = MilkEntryRepository();
+
+    await entries.createEntry(
+      accountId: id,
+      recordedAt: DateTime(2025, 12, 15),
+      quantityGrams: 2000,
+      ratePaisaPerKg: 10000,
+    );
+    await entries.createEntry(
+      accountId: id,
+      recordedAt: DateTime(2026, 1, 15),
+      quantityGrams: 3000,
+      ratePaisaPerKg: 10000,
+    );
+    await entries.createEntry(
+      accountId: id,
+      recordedAt: DateTime(2026, 2, 15),
+      quantityGrams: 4000,
+      ratePaisaPerKg: 10000,
+    );
+
+    final changed = await MilkRateRepository().updateFromMonth(
+      accountIds: [id],
+      month: DateTime(2026, 1),
+      ratePaisaPerKg: 15000,
+    );
+    expect(changed, 2);
+
+    final rows = await db.query(
+      'milk_entries',
+      where: 'account_id = ?',
+      whereArgs: [id],
+      orderBy: 'recorded_at ASC',
+    );
+    expect(rows.map((row) => row['rate_paisa_per_kg']).toList(),
+        [10000, 15000, 15000]);
+    expect(rows.map((row) => row['total_paisa']).toList(),
+        [20000, 45000, 60000]);
+
+    final updatedAccount = (await db.query(
+      'accounts',
+      where: 'id = ?',
+      whereArgs: [id],
+    )).single;
+    expect(updatedAccount['milk_rate_paisa'], 15000);
+    await AppDatabase.instance.close();
+  });
+
 }

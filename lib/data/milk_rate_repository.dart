@@ -8,7 +8,7 @@ class MilkRateRepository {
   Future<List<Map<String, Object?>>> activeAccounts() async {
     return (await _database.database).query(
       'accounts',
-      columns: ['id', 'account_number', 'customer_name', 'milk_rate_paisa'],
+      columns: ['id', 'account_number', 'customer_name', 'milk_rate_paisa', 'country_code', 'phone_number'],
       where: 'is_active = 1',
       orderBy: 'account_number ASC',
     );
@@ -22,8 +22,10 @@ class MilkRateRepository {
     required int ratePaisaPerKg,
   }) async {
     _validate(accountIds, ratePaisaPerKg);
-    final start = DateTime.utc(month.year, month.month, 1).toIso8601String();
-    final end = DateTime.utc(month.year, month.month + 1, 1).toIso8601String();
+    final startLocal = DateTime(month.year, month.month, 1);
+    final endLocal = DateTime(month.year, month.month + 1, 1);
+    final start = startLocal.toUtc().toIso8601String();
+    final end = endLocal.toUtc().toIso8601String();
     final db = await _database.database;
     return db.transaction((txn) async {
       var changed = 0;
@@ -42,6 +44,41 @@ class MilkRateRepository {
             start,
             end,
           ],
+        );
+      }
+      return changed;
+    });
+  }
+
+
+  /// Updates saved entries from the selected local month onward, then changes
+  /// the account's default rate for new entries.
+  Future<int> updateFromMonth({
+    required List<String> accountIds,
+    required DateTime month,
+    required int ratePaisaPerKg,
+  }) async {
+    _validate(accountIds, ratePaisaPerKg);
+    final startLocal = DateTime(month.year, month.month, 1);
+    final start = startLocal.toUtc().toIso8601String();
+    final db = await _database.database;
+    return db.transaction((txn) async {
+      var changed = 0;
+      final now = DateTime.now().toUtc().toIso8601String();
+      for (final id in accountIds) {
+        changed += await txn.rawUpdate(
+          '''UPDATE milk_entries
+             SET rate_paisa_per_kg = ?,
+                 total_paisa = CAST((quantity_grams * ? + 500) / 1000 AS INTEGER),
+                 updated_at = ?
+             WHERE account_id = ? AND recorded_at >= ?''',
+          [ratePaisaPerKg, ratePaisaPerKg, now, id, start],
+        );
+        await txn.update(
+          'accounts',
+          {'milk_rate_paisa': ratePaisaPerKg, 'updated_at': now},
+          where: 'id = ? AND is_active = 1',
+          whereArgs: [id],
         );
       }
       return changed;
