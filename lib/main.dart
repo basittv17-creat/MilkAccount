@@ -81,7 +81,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
   Widget build(BuildContext context) => Scaffold(body: Container(
     decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter,end: Alignment.bottomCenter,colors:[Color(0xFF003B91),Color(0xFF159FE4),Colors.white],stops:[0,.55,1])),
     child: SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(22),child: ConstrainedBox(constraints: const BoxConstraints(maxWidth:440),child: Column(children:[
-      const Icon(Icons.local_drink_rounded,size:82,color:Colors.white),const Text('Milk Account',style:TextStyle(fontSize:34,fontWeight:FontWeight.w900,color:Colors.white)),const Text('دودھ کا کھاتہ',style:TextStyle(fontSize:28,fontWeight:FontWeight.bold,color:Colors.white)),const SizedBox(height:28),
+      Image.asset('assets/images/milk_account_logo.png',height:82,width:82,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.local_drink_rounded,size:82,color:Colors.white)),const Text('Milk Account',style:TextStyle(fontSize:34,fontWeight:FontWeight.w900,color:Colors.white)),const Text('دودھ کا کھاتہ',style:TextStyle(fontSize:28,fontWeight:FontWeight.bold,color:Colors.white)),const SizedBox(height:28),
       Container(width:double.infinity,padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:Colors.white,borderRadius:const BorderRadius.all(Radius.circular(26)),border:Border.all(color:const Color(0xFF9EDCFF),width:3)),child:Column(children:[
         Text(tr(selected,'choose'),style:const TextStyle(fontSize:23,fontWeight:FontWeight.bold,color:Color(0xFF062D70))),const SizedBox(height:14),
         for(final option in const [('ur','🇵🇰','اردو (پاکستان)'),('en','🇺🇸','English'),('hi','🇮🇳','हिन्दी (Hindi)')])
@@ -263,7 +263,7 @@ class _DashboardState extends State<Dashboard> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white70, width: 1.5),
                   ),
-                  child: const Icon(Icons.local_drink_rounded, color: Colors.white, size: 38),
+                  child: Image.asset('assets/images/milk_account_logo.png',width:52,height:52,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.local_drink_rounded,color:Colors.white,size:38)),
                 ),
                 const SizedBox(height: 12),
                 const Text(
