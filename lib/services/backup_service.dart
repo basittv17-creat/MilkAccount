@@ -70,7 +70,7 @@ class BackupService {
     File? temporarySource;
     if (sourcePath == null && selected.bytes != null) {
       temporarySource = File(
-        '\${Directory.systemTemp.path}/milk_account_restore_\${DateTime.now().microsecondsSinceEpoch}.db',
+        Directory.systemTemp.path + '/milk_account_restore_' + DateTime.now().microsecondsSinceEpoch.toString() + '.db',
       );
       await temporarySource.writeAsBytes(selected.bytes!, flush: true);
       sourcePath = temporarySource.path;
