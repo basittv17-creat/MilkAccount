@@ -31,6 +31,12 @@ if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.SEND_SMS' "$MANIFEST"; 
   sed -i '/<application/i\\    <uses-permission android:name="android.permission.SEND_SMS" />\\n    <uses-feature android:name="android.hardware.telephony" android:required="false" />' "$MANIFEST"
 fi
 
+# Nearby Connections uses Bluetooth and Wi-Fi for direct, offline transfers.
+# These permissions are generated here because the Android folder is created in CI.
+if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.BLUETOOTH_ADVERTISE' "$MANIFEST"; then
+  sed -i '/<application/i\\    <uses-permission android:maxSdkVersion="32" android:name="android.permission.ACCESS_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="32" android:name="android.permission.CHANGE_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH_ADMIN" />\\n    <uses-permission android:maxSdkVersion="28" android:name="android.permission.ACCESS_COARSE_LOCATION" />\\n    <uses-permission android:minSdkVersion="29" android:maxSdkVersion="32" android:name="android.permission.ACCESS_FINE_LOCATION" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_ADVERTISE" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_CONNECT" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:minSdkVersion="32" android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:name="android.permission.CAMERA" />\\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
+fi
+
 # Keep legacy Android Gradle DSL enabled for plugins that still cast Android
 # source sets to the legacy AndroidLibrarySourceSet API (telephony_sms 0.1.0).
 # Flutter's newer Android DSL otherwise causes a ClassCastException in that plugin.

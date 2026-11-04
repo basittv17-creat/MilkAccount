@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/backup_service.dart';
+import 'data_transfer_screen.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key, required this.language});
@@ -20,6 +21,8 @@ class _BackupScreenState extends State<BackupScreen> {
       'ur': {
         'title': 'بیک اپ اور ڈیٹا منتقلی',
         'description': 'اپنے تمام کھاتوں، دودھ کی انٹریوں، ادائیگیوں اور ناگا کا ڈیٹا محفوظ کریں یا واپس بحال کریں۔',
+        'offline': 'آف لائن موبائل سے موبائل ڈیٹا منتقل کریں',
+        'offlineHelp': 'QR یا چھ ہندسوں کے کوڈ سے Bluetooth اور Wi-Fi کے ذریعے ڈیٹا بھیجیں۔ انٹرنیٹ استعمال نہیں ہوگا۔ وصول کرنے والے کا پرانا ڈیٹا محفوظ رہے گا۔',
         'export': 'بیک اپ محفوظ کریں',
         'share': 'بیک اپ جی میل یا دوسرے موبائل پر بھیجیں',
         'shared': 'بیک اپ شیئر کرنے کے لیے ایپس کھول دی گئی ہیں۔',
@@ -38,6 +41,8 @@ class _BackupScreenState extends State<BackupScreen> {
       'en': {
         'title': 'Backup & Data Transfer',
         'description': 'Save or restore all accounts, milk entries, payments and no-milk days.',
+        'offline': 'Transfer data offline between phones',
+        'offlineHelp': 'Use a QR code or six-digit code over Bluetooth and Wi-Fi. No internet is used, and existing receiver data is kept.',
         'export': 'Save Backup',
         'share': 'Share backup by Gmail or to another device',
         'shared': 'The sharing apps have been opened for your backup.',
@@ -56,6 +61,8 @@ class _BackupScreenState extends State<BackupScreen> {
       'hi': {
         'title': 'बैकअप और डेटा ट्रांसफर',
         'description': 'सभी खाते, दूध की एंट्री, भुगतान और नागा का डेटा सुरक्षित करें या वापस लाएँ।',
+        'offline': 'दो मोबाइल के बीच ऑफ़लाइन डेटा ट्रांसफर',
+        'offlineHelp': 'QR या छह अंकों के कोड से Bluetooth और Wi-Fi द्वारा डेटा भेजें। इंटरनेट इस्तेमाल नहीं होगा और पुराने रिकॉर्ड सुरक्षित रहेंगे।',
         'export': 'बैकअप सेव करें',
         'share': 'जीमेल या दूसरे मोबाइल पर बैकअप भेजें',
         'shared': 'बैकअप शेयर करने के लिए ऐप्स खोल दिए गए हैं।',
@@ -157,6 +164,29 @@ class _BackupScreenState extends State<BackupScreen> {
               style: const TextStyle(color: Colors.blueGrey, height: 1.4),
             ),
             const SizedBox(height: 24),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(_text('offline'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(_text('offlineHelp')),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(builder: (_) => DataTransferScreen(language: widget.language)),
+                      ),
+                      icon: const Icon(Icons.swap_horiz_rounded),
+                      label: Text(_text('offline')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: _busy ? null : () => _run(_export),
               icon: const Icon(Icons.save_alt_rounded),
