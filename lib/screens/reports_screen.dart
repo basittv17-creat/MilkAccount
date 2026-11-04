@@ -45,7 +45,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Milk amount: ${money(summary['milk_amount_paisa'])}',
       'Balance: ${money(summary['balance_paisa'])}',
       'Advance given: ${money(summary['advance_given_paisa'])}',
-      'Payments received: ${money(summary['payment_received_paisa'])}',
       'Milk quantity: ${((summary['milk_quantity_grams'] ?? 0) / 1000).toStringAsFixed(3)} kg',
       'Milk entries: ${summary['milk_entries']}',
       'No-milk days: ${summary['no_milk_days']}',
@@ -195,11 +194,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Expanded(child: _metric(t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडवांस'), data['balance_paisa'], const Color(0xFFE8E5FF))),
                       ]),
                       const SizedBox(height: 8),
-                      Row(children: [
-                        Expanded(child: _metric(t('ایڈوانس دیا', 'Advance Given', 'एडवांस दिया'), data['advance_given_paisa'], const Color(0xFFFFF2C6))),
-                        const SizedBox(width: 8),
-                        Expanded(child: _metric(t('وصول شدہ رقم', 'Payments Received', 'प्राप्त भुगतान'), data['payment_received_paisa'], const Color(0xFFE0F8E8))),
-                      ]),
+                      _metric(t('کل ایڈوانس دیا', 'Total advance given', 'कुल एडवांस दिया'), data['advance_given_paisa'], const Color(0xFFFFF2C6)),
                       const SizedBox(height: 10),
                       Text(
                         t('کل دودھ: ', 'Milk quantity: ', 'कुल दूध: ') +

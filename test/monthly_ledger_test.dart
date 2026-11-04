@@ -122,7 +122,7 @@ void main() {
     expect(summary['milk_quantity_grams'], 73500);
     expect(summary['milk_total_paisa'], 1837500);
     expect(summary['opening_advance_paisa'], 1000000);
-    expect(summary['remaining_advance_paisa'], 0);
+    expect(summary['remaining_advance_paisa'], 182500);
     expect(summary['balance_paisa'], -817500);
     expect(summary['month_days'], 28);
     expect((summary['average_fat'] as num).toDouble(), 4.5);

@@ -670,7 +670,7 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
       const SizedBox(height: 14),
       _detailSummary(summary),
       const SizedBox(height: 17),
-      _sectionTitle(t('روزانہ دودھ اور ادائیگیوں کی تفصیل', 'Daily milk and payment details', 'दैनिक दूध और भुगतान विवरण')),
+      _sectionTitle(t('روزانہ دودھ اور ایڈوانس کی تفصیل', 'Daily milk and advance details', 'दैनिक दूध और एडवांस विवरण')),
       _activityTable(activities, summary),
       const SizedBox(height: 17),
       _reportActions(account, summary, activities),
