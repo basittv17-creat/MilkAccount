@@ -172,14 +172,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            language == 'en' ? 'Milk accounting, made easy' : language == 'hi' ? 'दूध का हिसाब, अब आसान' : 'دودھ کا حساب، اب آسان',
+            widget.language == 'en' ? 'Milk accounting, made easy' : widget.language == 'hi' ? 'दूध का हिसाब, अब आसान' : 'دودھ کا حساب، اب آسان',
             textAlign: TextAlign.center,
-            textDirection: language == 'ur' ? TextDirection.rtl : TextDirection.ltr,
-            style: TextStyle(fontFamily: language == 'ur' ? 'NotoNaskhArabic' : null, color: const Color(0xFF06377C), fontSize: compact ? 23 : 27, fontWeight: FontWeight.w800, height: 1.15),
+            textDirection: widget.language == 'ur' ? TextDirection.rtl : TextDirection.ltr,
+            style: TextStyle(fontFamily: widget.language == 'ur' ? 'NotoNaskhArabic' : null, color: const Color(0xFF06377C), fontSize: compact ? 23 : 27, fontWeight: FontWeight.w800, height: 1.15),
           ),
           const SizedBox(height: 2),
           Text(
-            language == 'en' ? 'SMART MILK COLLECTION & ACCOUNT MANAGEMENT' : language == 'hi' ? 'स्मार्ट दूध संग्रह और खाता प्रबंधन' : 'دودھ جمع کرنے اور کھاتے کا آسان نظام',
+            widget.language == 'en' ? 'SMART MILK COLLECTION & ACCOUNT MANAGEMENT' : widget.language == 'hi' ? 'स्मार्ट दूध संग्रह और खाता प्रबंधन' : 'دودھ جمع کرنے اور کھاتے کا آسان نظام',
             textAlign: TextAlign.center,
             style: TextStyle(color: const Color(0xFF24527B), fontSize: compact ? 8 : 9, fontWeight: FontWeight.w900, letterSpacing: .7),
           ),
@@ -206,10 +206,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           ),
           const SizedBox(height: 6),
           Text(
-            language == 'en' ? 'Loading app, please wait...' : language == 'hi' ? 'ऐप लोड हो रही है, कृपया प्रतीक्षा करें...' : 'ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...',
-            textDirection: language == 'en' ? TextDirection.ltr : TextDirection.rtl,
+            widget.language == 'en' ? 'Loading app, please wait...' : widget.language == 'hi' ? 'ऐप लोड हो रही है, कृपया प्रतीक्षा करें...' : 'ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...',
+            textDirection: widget.language == 'en' ? TextDirection.ltr : TextDirection.rtl,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: language == 'en' ? null : 'NotoNaskhArabic', color: const Color(0xFF073B83), fontSize: compact ? 12 : 14, fontWeight: FontWeight.w700),
+            style: TextStyle(fontFamily: widget.language == 'en' ? null : 'NotoNaskhArabic', color: const Color(0xFF073B83), fontSize: compact ? 12 : 14, fontWeight: FontWeight.w700),
           ),
         ],
       ),
