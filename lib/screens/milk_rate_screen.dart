@@ -21,6 +21,7 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
   bool _sendSms = false;
   bool _sendWhatsApp = false;
   bool _saving = false;
+  int _step = 0;
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) =>
       _ur ? u : widget.language == 'hi' ? h : e;
@@ -40,13 +41,19 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
     return '${names[_month.month - 1]} ${_month.year}';
   }
 
-  Future<void> _pickMonth() async {
-    final picked = await showDatePicker(
-      context: context, initialDate: _month,
-      firstDate: DateTime(2000), lastDate: DateTime(2100),
-      helpText: t('مہینہ منتخب کریں', 'Select month', 'महीना चुनें'),
-    );
-    if (picked != null && mounted) setState(() => _month = DateTime(picked.year, picked.month));
+
+  String _monthName(int month) {
+    const urMonths = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
+    const enMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const hiMonths = ['जनवरी','फ़रवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितंबर','अक्टूबर','नवंबर','दिसंबर'];
+    final names = _ur ? urMonths : widget.language == 'hi' ? hiMonths : enMonths;
+    return names[month - 1];
+  }
+
+  String _monthLabel() => '${_monthName(_month.month)} ${_month.year}';
+
+  void _changeYear(int difference) {
+    setState(() => _month = DateTime(_month.year + difference, _month.month));
   }
 
   void _toggleAll(List<Map<String, Object?>> accounts, bool selected) {
@@ -60,8 +67,55 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
   void _changeMode(int mode) {
     setState(() {
       _mode = mode;
+      _step = 0;
       _selectedIds.clear();
       if (mode != 2) _singleAccountFutureOnly = false;
+    });
+  }
+
+
+  void _backStep() {
+    if (_step == 0) {
+      Navigator.maybePop(context);
+      return;
+    }
+    final skipMonth = _mode == 2 && _singleAccountFutureOnly;
+    setState(() => _step = _step == 2 && skipMonth ? 0 : _step - 1);
+  }
+
+  void _nextStep() {
+    if (_step == 0) {
+      setState(() => _step =
+          _mode == 2 && _singleAccountFutureOnly ? 2 : 1);
+      return;
+    }
+    if (_step == 1) {
+      setState(() => _step = 2);
+      return;
+    }
+    if (_step == 2) {
+      final validSelection = _mode == 2
+          ? _selectedIds.length == 1
+          : _selectedIds.isNotEmpty;
+      if (!validSelection) {
+        _message(t(
+          'کم از کم مطلوبہ کھاتہ منتخب کریں',
+          'Select the required account(s) first',
+          'पहले आवश्यक खाते चुनें',
+        ));
+        return;
+      }
+      setState(() => _step = 3);
+    }
+  }
+
+  void _cancelRateChange() {
+    setState(() {
+      _step = 0;
+      _selectedIds.clear();
+      _rate.clear();
+      _sendSms = false;
+      _sendWhatsApp = false;
     });
   }
 
@@ -172,6 +226,7 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
         setState(() {
           _selectedIds.clear();
           _rate.clear();
+          _step = 0;
           _sendSms = false;
           _sendWhatsApp = false;
           _load();
@@ -320,6 +375,10 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
     child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _saving ? null : _backStep,
+        ),
         title: Text(t('دودھ کے ریٹ تبدیل کریں', 'Change milk rates', 'दूध के रेट बदलें')),
         backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white,
       ),
@@ -332,14 +391,20 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
           if (accounts.isEmpty) return Center(child: Text(t('پہلے نیا کھاتہ بنائیں', 'Create an account first', 'पहले खाता बनाएँ')));
           _selectedIds.removeWhere((id) => !accounts.any((a) => a['id'] == id));
           final allSelected = _selectedIds.length == accounts.length;
+
           return ListView(
             padding: const EdgeInsets.all(14),
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFE7F4FF), Colors.white]),
-                  border: Border.all(color: const Color(0xFF91CFFF), width: 1.5),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE7F4FF), Colors.white],
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF91CFFF),
+                    width: 1.5,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -366,201 +431,423 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
                               'Only saved entries in the selected month will change. Other months and future rates stay unchanged.',
                               'केवल चुने महीने की सेव एंट्री बदलेगी। दूसरे महीने और आगे के रेट पर असर नहीं होगा।',
                             ),
-                  style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
 
-              _sectionTitle(t('ریٹ تبدیل کرنے کا طریقہ منتخب کریں',
-                  'Choose rate change method', 'रेट बदलने का तरीका चुनें')),
-              RadioListTile<int>(
-                value: 0, groupValue: _mode,
-                onChanged: _saving ? null : (value) => _changeMode(value!),
-                title: Text(t('منتخب مہینے کا ریٹ تبدیل کریں',
-                    'Change rate for a selected month', 'चुने महीने का रेट बदलें')),
-                subtitle: Text(t('صرف منتخب مہینے کی محفوظ انٹریاں',
-                    'Only saved entries in that month', 'केवल उस महीने की सेव एंट्री')),
-                contentPadding: EdgeInsets.zero,
-              ),
-              RadioListTile<int>(
-                value: 1, groupValue: _mode,
-                onChanged: _saving ? null : (value) => _changeMode(value!),
-                title: Text(t('منتخب مہینے سے آئندہ ریٹ تبدیل کریں',
+              if (_step == 0) ...[
+                _sectionTitle(t(
+                  'ریٹ تبدیل کرنے کا طریقہ منتخب کریں',
+                  'Choose rate change method',
+                  'रेट बदलने का तरीका चुनें',
+                )),
+                RadioListTile<int>(
+                  value: 0,
+                  groupValue: _mode,
+                  onChanged: _saving ? null : (value) => _changeMode(value!),
+                  title: Text(t(
+                    'منتخب مہینے کا ریٹ تبدیل کریں',
+                    'Change rate for a selected month',
+                    'चुने महीने का रेट बदलें',
+                  )),
+                  subtitle: Text(t(
+                    'صرف منتخب مہینے کی محفوظ انٹریاں',
+                    'Only saved entries in that month',
+                    'केवल उस महीने की सेव एंट्री',
+                  )),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                RadioListTile<int>(
+                  value: 1,
+                  groupValue: _mode,
+                  onChanged: _saving ? null : (value) => _changeMode(value!),
+                  title: Text(t(
+                    'منتخب مہینے سے آئندہ ریٹ تبدیل کریں',
                     'Change rate from a selected month onward',
-                    'चुने महीने से आगे का रेट बदलें')),
-                subtitle: Text(t('منتخب مہینے سے تمام اگلے مہینوں اور نئی انٹریوں تک',
+                    'चुने महीने से आगे का रेट बदलें',
+                  )),
+                  subtitle: Text(t(
+                    'اس مہینے سے تمام اگلے مہینوں اور نئی انٹریوں تک',
                     'Saved entries from that month onward and future entries',
-                    'उस महीने से आगे की सेव और नई एंट्री')),
-                contentPadding: EdgeInsets.zero,
-              ),
-              RadioListTile<int>(
-                value: 2, groupValue: _mode,
-                onChanged: _saving ? null : (value) => _changeMode(value!),
-                title: Text(t('کسی خاص کھاتے کا ریٹ تبدیل کریں',
-                    'Change one specific account rate', 'किसी खास खाते का रेट बदलें')),
-                subtitle: Text(t('صرف ایک کھاتہ منتخب کریں',
-                    'Select one account only', 'केवल एक खाता चुनें')),
-                contentPadding: EdgeInsets.zero,
-              ),
-              if (_mode == 2) ...[
-                const Divider(height: 18),
-                _sectionTitle(t('اس کھاتے کے ریٹ کا اطلاق',
-                    'Apply this account rate to', 'इस खाते का रेट लागू करें')),
-                RadioListTile<bool>(
-                  value: false, groupValue: _singleAccountFutureOnly,
-                  onChanged: _saving ? null : (value) =>
-                      setState(() => _singleAccountFutureOnly = value!),
-                  title: Text(t('منتخب مہینے کی انٹریاں',
-                      'Selected month entries', 'चुने महीने की एंट्री')),
+                    'उस महीने से आगे की सेव और नई एंट्री',
+                  )),
                   contentPadding: EdgeInsets.zero,
                 ),
-                RadioListTile<bool>(
-                  value: true, groupValue: _singleAccountFutureOnly,
-                  onChanged: _saving ? null : (value) =>
-                      setState(() => _singleAccountFutureOnly = value!),
-                  title: Text(t('آئندہ انٹریاں',
-                      'Future entries', 'आगे की एंट्री')),
+                RadioListTile<int>(
+                  value: 2,
+                  groupValue: _mode,
+                  onChanged: _saving ? null : (value) => _changeMode(value!),
+                  title: Text(t(
+                    'کسی خاص کھاتے کا ریٹ تبدیل کریں',
+                    'Change one specific account rate',
+                    'किसी खास खाते का रेट बदलें',
+                  )),
+                  subtitle: Text(t(
+                    'صرف ایک کھاتہ منتخب کریں',
+                    'Select one account only',
+                    'केवल एक खाता चुनें',
+                  )),
                   contentPadding: EdgeInsets.zero,
                 ),
-              ],
-              if (_mode != 2 || !_singleAccountFutureOnly) ...[
-                const SizedBox(height: 8),
-                _sectionTitle(t('مہینہ منتخب کریں', 'Select month', 'महीना चुनें')),
-                OutlinedButton.icon(
-                  onPressed: _saving ? null : _pickMonth,
-                  icon: const Icon(Icons.calendar_month),
-                  label: Text(_monthLabel(),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: Colors.white,
+                if (_mode == 2) ...[
+                  const Divider(height: 18),
+                  _sectionTitle(t(
+                    'اس کھاتے کے ریٹ کا اطلاق',
+                    'Apply this account rate to',
+                    'इस खाते का रेट लागू करें',
+                  )),
+                  RadioListTile<bool>(
+                    value: false,
+                    groupValue: _singleAccountFutureOnly,
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(
+                              () => _singleAccountFutureOnly = value!,
+                            ),
+                    title: Text(t(
+                      'منتخب مہینہ',
+                      'Selected month',
+                      'चुना महीना',
+                    )),
+                    contentPadding: EdgeInsets.zero,
                   ),
-                ),
-              ],
-              Row(children: [
-                Expanded(child: _sectionTitle(t('کھاتے منتخب کریں', 'Select accounts', 'खाते चुनें'))),
-                if (_mode != 2)
-                  TextButton(
-                    onPressed: _saving ? null : () => _toggleAll(accounts, !allSelected),
-                    child: Text(allSelected ? t('سب ختم کریں', 'Clear all', 'सब हटाएँ') : t('تمام کھاتے منتخب کریں', 'Select all', 'सभी खाते चुनें')),
+                  RadioListTile<bool>(
+                    value: true,
+                    groupValue: _singleAccountFutureOnly,
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(
+                              () => _singleAccountFutureOnly = value!,
+                            ),
+                    title: Text(t(
+                      'آئندہ انٹریاں',
+                      'Future entries',
+                      'आगे की एंट्री',
+                    )),
+                    contentPadding: EdgeInsets.zero,
                   ),
-              ]),
+                ],
+              ],
 
-              for (final account in accounts)
-                Card(
-                  color: _selectedIds.contains(account['id'])
-                      ? const Color(0xFFE3F8E9)
-                      : Colors.white,
-                  shape: RoundedRectangleBorder(
+              if (_step == 1) ...[
+                _sectionTitle(t(
+                  'مہینہ منتخب کریں',
+                  'Select month',
+                  'महीना चुनें',
+                )),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFB7D5EF)),
                     borderRadius: BorderRadius.circular(13),
-                    side: BorderSide(
-                      color: _selectedIds.contains(account['id'])
-                          ? const Color(0xFF079B37)
-                          : const Color(0xFFD5E8F8),
-                    ),
                   ),
-                  child: _mode == 2
-                      ? RadioListTile<String>(
-                          value: account['id'] as String,
-                          groupValue: _selectedIds.isEmpty
-                              ? null
-                              : _selectedIds.first,
-                          onChanged: _saving
-                              ? null
-                              : (value) => _selectAccount(value!, true),
-                          activeColor: const Color(0xFF079B37),
-                          secondary: CircleAvatar(
-                            backgroundColor: const Color(0xFFDFF1FF),
-                            child: Text(account['account_number'].toString(),
-                                style: const TextStyle(
-                                    color: Color(0xFF0649AE),
-                                    fontWeight: FontWeight.bold)),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: _saving ? null : () => _changeYear(-1),
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Expanded(
+                        child: Text(
+                          _month.year.toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
                           ),
-                          title: Text(account['customer_name'].toString(),
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(t('موجودہ ریٹ: ', 'Current rate: ',
-                                  'मौजूदा रेट: ') +
-                              _money(account['milk_rate_paisa'])),
-                        )
-                      : CheckboxListTile(
-                          value: _selectedIds.contains(account['id']),
-                          onChanged: _saving
-                              ? null
-                              : (value) => _selectAccount(
-                                  account['id'] as String, value == true),
-                          activeColor: const Color(0xFF079B37),
-                          secondary: CircleAvatar(
-                            backgroundColor: const Color(0xFFDFF1FF),
-                            child: Text(account['account_number'].toString(),
-                                style: const TextStyle(
-                                    color: Color(0xFF0649AE),
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                          title: Text(account['customer_name'].toString(),
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(t('موجودہ ریٹ: ', 'Current rate: ',
-                                  'मौजूदा रेट: ') +
-                              _money(account['milk_rate_paisa'])),
-                          controlAffinity: ListTileControlAffinity.trailing,
                         ),
+                      ),
+                      IconButton(
+                        onPressed: _saving ? null : () => _changeYear(1),
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
                 ),
-              const SizedBox(height: 12),
-              _sectionTitle(t('نیا دودھ کا ریٹ فی کلو', 'New milk rate per kg', 'दूध का नया रेट प्रति किलो')),
-              Row(children: [
-                IconButton.filledTonal(
-                  onPressed: _saving ? null : () => _adjustRate(-1),
-                  icon: const Icon(Icons.remove),
+                for (var month = 1; month <= 12; month++)
+                  Card(
+                    margin: const EdgeInsets.only(top: 6),
+                    color: _month.month == month
+                        ? const Color(0xFFE0F5E6)
+                        : Colors.white,
+                    child: RadioListTile<int>(
+                      value: month,
+                      groupValue: _month.month,
+                      onChanged: _saving
+                          ? null
+                          : (value) => setState(() {
+                                _month = DateTime(_month.year, value!);
+                              }),
+                      activeColor: const Color(0xFF079B37),
+                      title: Text(
+                        '${_monthName(month)} ${_month.year}',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
+                    ),
+                  ),
+              ],
+
+              if (_step == 2) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _sectionTitle(t(
+                        'کھاتے منتخب کریں',
+                        'Select accounts',
+                        'खाते चुनें',
+                      )),
+                    ),
+                    if (_mode != 2)
+                      TextButton(
+                        onPressed: _saving
+                            ? null
+                            : () => _toggleAll(accounts, !allSelected),
+                        child: Text(allSelected
+                            ? t('سب ختم کریں', 'Clear all', 'सब हटाएँ')
+                            : t('تمام کھاتے منتخب کریں', 'Select all', 'सभी खाते चुनें')),
+                      ),
+                  ],
                 ),
-                Expanded(
-                  child: TextField(
-                    controller: _rate, enabled: !_saving,
-                    textAlign: TextAlign.center,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      prefixText: 'Rs. ', hintText: '270.00',
-                      filled: true, fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+                for (final account in accounts)
+                  Card(
+                    color: _selectedIds.contains(account['id'])
+                        ? const Color(0xFFE3F8E9)
+                        : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                      side: BorderSide(
+                        color: _selectedIds.contains(account['id'])
+                            ? const Color(0xFF079B37)
+                            : const Color(0xFFD5E8F8),
+                      ),
+                    ),
+                    child: _mode == 2
+                        ? RadioListTile<String>(
+                            value: account['id'] as String,
+                            groupValue: _selectedIds.isEmpty
+                                ? null
+                                : _selectedIds.first,
+                            onChanged: _saving
+                                ? null
+                                : (value) =>
+                                    _selectAccount(value!, true),
+                            activeColor: const Color(0xFF079B37),
+                            secondary: CircleAvatar(
+                              backgroundColor: const Color(0xFFDFF1FF),
+                              child: Text(
+                                account['account_number'].toString(),
+                                style: const TextStyle(
+                                  color: Color(0xFF0649AE),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              account['customer_name'].toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              t('موجودہ ریٹ: ', 'Current rate: ', 'मौजूदा रेट: ') +
+                                  _money(account['milk_rate_paisa']),
+                            ),
+                          )
+                        : CheckboxListTile(
+                            value: _selectedIds.contains(account['id']),
+                            onChanged: _saving
+                                ? null
+                                : (value) => _selectAccount(
+                                      account['id'] as String,
+                                      value == true,
+                                    ),
+                            activeColor: const Color(0xFF079B37),
+                            secondary: CircleAvatar(
+                              backgroundColor: const Color(0xFFDFF1FF),
+                              child: Text(
+                                account['account_number'].toString(),
+                                style: const TextStyle(
+                                  color: Color(0xFF0649AE),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              account['customer_name'].toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              t('موجودہ ریٹ: ', 'Current rate: ', 'मौजूदा रेट: ') +
+                                  _money(account['milk_rate_paisa']),
+                            ),
+                            controlAffinity: ListTileControlAffinity.trailing,
+                          ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    t('منتخب کھاتے: ', 'Selected accounts: ', 'चुने खाते: ') +
+                        _selectedIds.length.toString(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0649AE),
                     ),
                   ),
                 ),
-                IconButton.filledTonal(
-                  onPressed: _saving ? null : () => _adjustRate(1),
-                  icon: const Icon(Icons.add),
-                ),
-              ]),
+              ],
 
-              CheckboxListTile(
-                value: _sendSms,
-                onChanged: _saving ? null : (value) =>
-                    setState(() => _sendSms = value ?? false),
-                activeColor: const Color(0xFF079B37),
-                secondary: const Icon(Icons.sms, color: Color(0xFF0756C9)),
-                title: Text(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें')),
-                contentPadding: EdgeInsets.zero,
-              ),
-              CheckboxListTile(
-                value: _sendWhatsApp,
-                onChanged: _saving ? null : (value) =>
-                    setState(() => _sendWhatsApp = value ?? false),
-                activeColor: const Color(0xFF079B37),
-                secondary: const Icon(Icons.chat, color: Color(0xFF168B45)),
-                title: const Text('WhatsApp'),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : () => _save(accounts),
-                  icon: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle),
-                  label: Text(_saving ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है') : t('منتخب ریٹ محفوظ کریں', 'Apply selected rate', 'चुना हुआ रेट लागू करें')),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF079B37), foregroundColor: Colors.white,
-                    textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              if (_step == 3) ...[
+                _sectionTitle(t(
+                  'فی کلو دودھ کی نئی قیمت',
+                  'New milk rate per kg',
+                  'दूध का नया रेट प्रति किलो',
+                )),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFB7D5EF)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton.filledTonal(
+                        onPressed: _saving ? null : () => _adjustRate(-1),
+                        icon: const Icon(Icons.remove),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _rate,
+                          enabled: !_saving,
+                          textAlign: TextAlign.center,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            prefixText: 'Rs. ',
+                            hintText: '270.00',
+                            filled: true,
+                            fillColor: const Color(0xFFF3F9FF),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        onPressed: _saving ? null : () => _adjustRate(1),
+                        icon: const Icon(Icons.add),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                CheckboxListTile(
+                  value: _sendSms,
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _sendSms = value ?? false),
+                  activeColor: const Color(0xFF079B37),
+                  secondary: const Icon(Icons.sms, color: Color(0xFF0756C9)),
+                  title: Text(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें')),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                CheckboxListTile(
+                  value: _sendWhatsApp,
+                  onChanged: _saving
+                      ? null
+                      : (value) =>
+                          setState(() => _sendWhatsApp = value ?? false),
+                  activeColor: const Color(0xFF079B37),
+                  secondary: const Icon(Icons.chat, color: Color(0xFF168B45)),
+                  title: const Text('WhatsApp'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : _cancelRateChange,
+                          icon: const Icon(Icons.close),
+                          label: Text(t('منسوخ', 'Cancel', 'रद्द करें')),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFC62828),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : () => _save(accounts),
+                          icon: _saving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle),
+                          label: Text(_saving
+                              ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है')
+                              : t('محفوظ کریں', 'Save rate', 'रेट सेव करें')),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF079B37),
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              if (_step < 3) ...[
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 54,
+                  child: FilledButton.icon(
+                    onPressed: _saving ? null : _nextStep,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: Text(t('آگے بڑھیں', 'Next', 'आगे बढ़ें')),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF079B37),
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           );
         },
