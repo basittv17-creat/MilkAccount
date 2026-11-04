@@ -52,7 +52,7 @@ class _MilkAccountAppState extends State<MilkAccountApp> {
     localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0756C9)), scaffoldBackgroundColor: const Color(0xFFF3F9FF)),
     home: !splashComplete
-      ? SplashScreen(onFinished: () {
+      ? SplashScreen(language: language.isEmpty ? 'ur' : language, onFinished: () {
           if (mounted) setState(() => splashComplete = true);
         })
       : language.isEmpty

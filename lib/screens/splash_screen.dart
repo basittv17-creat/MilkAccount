@@ -3,8 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, required this.onFinished});
+  const SplashScreen({super.key, required this.onFinished, required this.language});
   final VoidCallback onFinished;
+  final String language;
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -171,14 +172,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'دودھ کا حساب، اب آسان',
+            language == 'en' ? 'Milk accounting, made easy' : language == 'hi' ? 'दूध का हिसाब, अब आसान' : 'دودھ کا حساب، اب آسان',
             textAlign: TextAlign.center,
             textDirection: TextDirection.rtl,
             style: TextStyle(fontFamily: 'NotoNaskhArabic', color: const Color(0xFF06377C), fontSize: compact ? 23 : 27, fontWeight: FontWeight.w800, height: 1.15),
           ),
           const SizedBox(height: 2),
           Text(
-            'SMART MILK COLLECTION & ACCOUNT MANAGEMENT',
+            language == 'en' ? 'SMART MILK COLLECTION & ACCOUNT MANAGEMENT' : language == 'hi' ? 'स्मार्ट दूध संग्रह और खाता प्रबंधन' : 'دودھ جمع کرنے اور کھاتے کا آسان نظام',
             textAlign: TextAlign.center,
             style: TextStyle(color: const Color(0xFF24527B), fontSize: compact ? 8 : 9, fontWeight: FontWeight.w900, letterSpacing: .7),
           ),
@@ -205,10 +206,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           ),
           const SizedBox(height: 6),
           Text(
-            'ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...',
-            textDirection: TextDirection.rtl,
+            language == 'en' ? 'Loading app, please wait...' : language == 'hi' ? 'ऐप लोड हो रही है, कृपया प्रतीक्षा करें...' : 'ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...',
+            textDirection: language == 'en' ? TextDirection.ltr : TextDirection.rtl,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'NotoNaskhArabic', color: const Color(0xFF073B83), fontSize: compact ? 12 : 14, fontWeight: FontWeight.w700),
+            style: TextStyle(fontFamily: language == 'en' ? null : 'NotoNaskhArabic', color: const Color(0xFF073B83), fontSize: compact ? 12 : 14, fontWeight: FontWeight.w700),
           ),
         ],
       ),

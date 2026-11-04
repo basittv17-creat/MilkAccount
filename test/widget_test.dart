@@ -43,7 +43,7 @@ void main() {
     final preferences = await SharedPreferences.getInstance();
     await tester.pumpWidget(MilkAccountApp(preferences: preferences));
 
-    expect(find.text('ایپ لوڈ ہو رہی ہے، براہِ کرم انتظار کریں...'),
+    expect(find.text('ऐप लोड हो रही है, कृपया प्रतीक्षा करें...'),
         findsOneWidget);
     await tester.pump(const Duration(milliseconds: 4400));
     await tester.pump();
