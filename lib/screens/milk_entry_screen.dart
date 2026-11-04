@@ -23,6 +23,7 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
   bool _saving = false;
   bool _sendSms = true;
   bool _sendWhatsApp = true;
+  String? _successMessage;
 
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) => _ur ? u : widget.language == 'hi' ? h : e;
@@ -68,7 +69,7 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
       context: context, initialDate: _date,
       firstDate: DateTime(2000), lastDate: DateTime(2100));
     if (value != null && mounted) {
-      setState(() { _date = value; _recordedAt = DateTime(value.year, value.month, value.day, _recordedAt.hour, _recordedAt.minute); _selected = null; });
+      setState(() { _date = value; _recordedAt = DateTime(value.year, value.month, value.day, _recordedAt.hour, _recordedAt.minute); _selected = null; _successMessage = null; });
       await _loadAccounts();
     }
   }
@@ -84,6 +85,7 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
     final now = DateTime.now();
     setState(() {
       _selected = account;
+      _successMessage = null;
       _quantity.clear();
       _fat.text = (account['fat_enabled'] as int? ?? 0) == 1 ? '4.5' : '';
       _note.clear();
@@ -122,8 +124,14 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
         ratePaisa: ratePaisa, totalPaisa: totalPaisa, fat: fat, note: note);
       await _loadAccounts();
       if (mounted) {
-        setState(() => _selected = null);
-        _message(t('آج کا دودھ وصول (اندراج ہو گیا)', 'Today’s milk entry saved', 'आज का दूध दर्ज हो गया'));
+        setState(() {
+          _selected = null;
+          _successMessage = t(
+            'آج کا دودھ کامیابی سے درج ہو گیا ہے',
+            'Today’s milk entry was saved successfully',
+            'आज का दूध सफलतापूर्वक दर्ज हो गया है',
+          );
+        });
         if (_sendSms || _sendWhatsApp) await _showShareOptions(account, message);
       }
     } catch (error) {
@@ -245,6 +253,27 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
   );
 
   Widget _listView() => ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 22), children: [
+    if (_successMessage != null)
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE5F8E9),
+          border: Border.all(color: const Color(0xFF64BC78), width: 1.4),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(children: [
+          const Icon(Icons.check_circle, color: Color(0xFF079B37), size: 28),
+          const SizedBox(width: 9),
+          Expanded(child: Text(
+            _successMessage!,
+            style: const TextStyle(
+              color: Color(0xFF075A24),
+              fontWeight: FontWeight.w900,
+            ),
+          )),
+        ]),
+      ),
     _datePicker(),
     const SizedBox(height: 10),
     TextField(controller: _search, decoration: InputDecoration(
@@ -352,10 +381,51 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
       _toggleRow(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें'), Icons.sms, _sendSms, (v) => setState(() => _sendSms = v)),
       _toggleRow(t('WhatsApp پر بھیجیں', 'Send on WhatsApp', 'WhatsApp पर भेजें'), Icons.chat, _sendWhatsApp, (v) => setState(() => _sendWhatsApp = v)),
       const SizedBox(height: 14),
-      SizedBox(height: 54, child: FilledButton.icon(
-        onPressed: _saving ? null : _save, icon: const Icon(Icons.check_circle),
-        label: Text(_saving ? t('محفوظ ہو رہا ہے...', 'Saving...', 'सेव हो रहा है...') : t('دودھ محفوظ کریں', 'Save Milk Entry', 'दूध सेव करें')),
-        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF079B37), foregroundColor: Colors.white, textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)))),
+      Row(children: [
+        Expanded(
+          child: SizedBox(
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: _saving ? null : () {
+                setState(() {
+                  _selected = null;
+                  _quantity.clear();
+                  _fat.clear();
+                  _note.clear();
+                });
+              },
+              icon: const Icon(Icons.close),
+              label: Text(t('منسوخ', 'Cancel', 'रद्द करें')),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC62828),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: SizedBox(
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: const Icon(Icons.check_circle),
+              label: Text(_saving
+                  ? t('محفوظ ہو رہا ہے...', 'Saving...', 'सेव हो रहा है...')
+                  : t('محفوظ کریں', 'Save Milk Entry', 'दूध सेव करें')),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF079B37),
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ]),
+
     ]);
   }
 
