@@ -107,7 +107,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     var milk = 0;
     var grams = 0;
     var advances = 0;
-    var received = 0;
     var noMilkDays = 0;
 
     for (final row in records) {
@@ -117,8 +116,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           grams += (row['quantity_grams'] as int?) ?? 0;
         case 'advance':
           advances += (row['amount_paisa'] as int?) ?? 0;
-        case 'payment':
-          received += (row['amount_paisa'] as int?) ?? 0;
         case 'naga':
           noMilkDays++;
       }
@@ -134,8 +131,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       '${t('کل دودھ', 'Total milk', 'कुल दूध')}: ${(grams / 1000).toStringAsFixed(3)} kg',
       '${t('دودھ کی کل رقم', 'Milk amount', 'दूध की रकम')}: ${_money(milk)}',
       '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
-      '${t('رقم وصول', 'Payments received', 'प्राप्त भुगतान')}: ${_money(received)}',
-      '${t('باقی بیلنس', 'Remaining balance', 'बाकी बैलेंस')}: ${_money(milk + advances - received)}',
+      '${t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडوانس')}: ${_money(advances - milk)}',
       '${t('ناگا کے دن', 'No-milk days', 'नागा दिन')}: $noMilkDays',
       '',
       t('مکمل روزانہ تفصیل', 'Complete daily details', 'पूरी दैनिक जानकारी'),
@@ -174,7 +170,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               ? t('ناگا', 'No milk', 'नागा')
               : isAdvance
                   ? t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')
-                  : t('رقم وصول', 'Payment received', 'रकम प्राप्त');
+                  : t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया');
       lines.add('$date $time | $title | $detail | $amount');
     }
 
@@ -306,7 +302,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       final isMilk = type == 'milk';
       final isNaga = type == 'naga';
       final isAdvance = type == 'advance';
-      final isPayment = type == 'payment';
       final dt = isNaga ? null : _local(row['recorded_at']);
       final day = isNaga ? DateTime.tryParse(row['day'].toString()) : dt;
       final date = day == null ? '—' : _date(day);
@@ -318,9 +313,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
 
       final amount = (row['total_paisa'] as int?) ?? 0;
       final advanceAmount = (row['amount_paisa'] as int?) ?? 0;
-      if (isMilk) balancePaisa += amount;
       if (isAdvance) balancePaisa += advanceAmount;
-      if (isPayment) balancePaisa -= advanceAmount;
+      if (isMilk) balancePaisa -= amount;
 
       final milkLabel = isMilk
           ? ((row['quantity_grams'] as int) / 1000).toStringAsFixed(1)
@@ -334,7 +328,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       final fat = isMilk ? (row['fat_value'] ?? '—').toString() : '—';
       final milkAmount = isMilk ? _money(amount) : isNaga ? '0' : '—';
       final advance = isAdvance ? _money(advanceAmount) : '—';
-      final received = isPayment ? _money(advanceAmount) : '—';
 
       rows.add(DataRow(
         color: isNaga
@@ -352,7 +345,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           DataCell(Text(fat)),
           DataCell(Text(milkAmount)),
           DataCell(Text(advance)),
-          DataCell(Text(received)),
           DataCell(Text(_money(balancePaisa),
               style: const TextStyle(fontWeight: FontWeight.w800))),
         ],
@@ -379,7 +371,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           DataColumn(label: Text('FAT %')),
           DataColumn(label: Text(t('دودھ قیمت', 'Milk amount', 'दूध रकम'))),
           DataColumn(label: Text(t('ایڈوانس', 'Advance', 'एडवांस'))),
-          DataColumn(label: Text(t('وصولی', 'Received', 'प्राप्त'))),
           DataColumn(label: Text(t('بقایا', 'Balance', 'बाकी'))),
         ],
         rows: rows,
@@ -439,24 +430,23 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                 if (records.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
                 if (records.hasError) return Text(records.error.toString());
                 final list = records.data ?? [];
-                var milk = 0, grams = 0, advances = 0, received = 0;
+                var milk = 0, grams = 0, advances = 0;
                 for (final row in list) {
                   switch (row['activity_type']) {
                     case 'milk': milk += row['total_paisa'] as int; grams += row['quantity_grams'] as int;
                     case 'advance': advances += row['amount_paisa'] as int;
-                    case 'payment': received += row['amount_paisa'] as int;
                   }
                 }
-                final balance = milk + advances - received;
+                final balance = advances - milk;
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Card(color: const Color(0xFFDFF1FF), child: Padding(padding: const EdgeInsets.all(12), child: Wrap(
                     alignment: WrapAlignment.spaceBetween, spacing: 12, runSpacing: 10, children: [
                       _total(t('دودھ کی رقم','Milk total','दूध रकम'), _money(milk)),
                       _total(t('دودھ کی مقدار','Milk quantity','दूध मात्रा'), '${(grams / 1000).toStringAsFixed(3)} kg'),
                       _total(t('ایڈوانس دیا','Advance given','एडवांस दिया'), _money(advances)),
-                                            _total(t('باقی بیلنس','Balance','बाकी बैलेंस'), _money(balance)),
+                                            _total(t('باقی ایڈوانس','Remaining advance','बाकी एडوانس'), _money(balance)),
                     ]))),
-                  Text(t('ماہانہ دودھ اور ادائیگیوں کا مکمل حساب','Complete monthly milk and payment ledger','मासिक दूध और भुगतान का पूरा हिसाब'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(t('ماہانہ دودھ اور ایڈوانس کا مکمل حساب','Complete monthly milk and advance ledger','मासिक दूध और एडवांस का पूरा हिसाब'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   _ledgerTable(list),
                   _reportActions(a, list),
                 ]);

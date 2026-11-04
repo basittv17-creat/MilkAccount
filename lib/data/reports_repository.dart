@@ -32,9 +32,8 @@ class ReportsRepository {
       [bounds.start, bounds.end],
     );
     final advance = await db.rawQuery(
-      'SELECT direction, COALESCE(SUM(amount_paisa), 0) AS amount '
-      'FROM advances WHERE recorded_at >= ? AND recorded_at < ? '
-      'GROUP BY direction',
+      "SELECT COALESCE(SUM(amount_paisa), 0) AS amount FROM advances "
+      "WHERE direction = 'given_to_customer' AND recorded_at >= ? AND recorded_at < ?",
       [bounds.start, bounds.end],
     );
     // no_milk_days.day is a calendar-date value, not a UTC timestamp.
@@ -42,23 +41,14 @@ class ReportsRepository {
       'SELECT COUNT(*) AS days FROM no_milk_days WHERE day >= ? AND day < ?',
       [dateStart, dateEnd],
     );
-    var given = 0;
-    var received = 0;
-    for (final row in advance) {
-      if (row['direction'] == 'given_to_customer') {
-        given = row['amount'] as int;
-      } else if (row['direction'] == 'received_from_customer') {
-        received = row['amount'] as int;
-      }
-    }
+    final given = (advance.first['amount'] as int?) ?? 0;
     final milkAmount = milk.first['amount'] as int;
     return {
       'milk_amount_paisa': milkAmount,
       'milk_quantity_grams': milk.first['grams'] as int,
       'milk_entries': milk.first['entries'] as int,
       'advance_given_paisa': given,
-      'payment_received_paisa': received,
-      'balance_paisa': milkAmount + given - received,
+      'balance_paisa': given - milkAmount,
       'no_milk_days': noMilk.first['days'] as int,
     };
   }

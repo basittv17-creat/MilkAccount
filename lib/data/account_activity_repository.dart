@@ -19,7 +19,7 @@ class AccountActivityRepository {
       where: 'account_id = ? AND recorded_at >= ? AND recorded_at < ?',
       whereArgs: [accountId, from, until], orderBy: 'recorded_at ASC');
     final advances = await db.query('advances',
-      where: 'account_id = ? AND recorded_at >= ? AND recorded_at < ?',
+      where: "account_id = ? AND direction = 'given_to_customer' AND recorded_at >= ? AND recorded_at < ?",
       whereArgs: [accountId, from, until], orderBy: 'recorded_at ASC');
     final firstDay = DateTime.utc(start.year, start.month, start.day).toIso8601String();
     final lastDay = DateTime.utc(end.year, end.month, end.day).toIso8601String();
@@ -32,7 +32,7 @@ class AccountActivityRepository {
         'sort_at': row['recorded_at'],
       }),
       ...advances.map((row) => <String, Object?>{
-        ...row, 'activity_type': row['direction'] == 'given_to_customer' ? 'advance' : 'payment',
+        ...row, 'activity_type': 'advance',
         'sort_at': row['recorded_at'],
       }),
       ...naga.map((row) => <String, Object?>{

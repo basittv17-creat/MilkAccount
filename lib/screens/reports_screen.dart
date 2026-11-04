@@ -192,7 +192,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       Row(children: [
                         Expanded(child: _metric(t('دودھ کی کل رقم', 'Milk Amount', 'दूध की रकम'), data['milk_amount_paisa'], const Color(0xFFDFF1FF))),
                         const SizedBox(width: 8),
-                        Expanded(child: _metric(t('باقی بیلنس', 'Balance', 'बाकी बैलेंस'), data['balance_paisa'], const Color(0xFFE8E5FF))),
+                        Expanded(child: _metric(t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडवांस'), data['balance_paisa'], const Color(0xFFE8E5FF))),
                       ]),
                       const SizedBox(height: 8),
                       Row(children: [

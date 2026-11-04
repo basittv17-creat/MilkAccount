@@ -48,8 +48,8 @@ class MonthlyLedgerRepository {
   ///
   /// The existing month-only balance remains available as balance_paisa.
   /// The opening and remaining advance values are carried forward from the
-  /// account's full history: a negative running balance represents credit
-  /// held for the customer.
+  /// account's full history: a positive running balance represents advance
+  /// credit held for the customer.
   Future<Map<String, Object?>> summary({
     required String accountId,
     required DateTime month,
@@ -68,7 +68,7 @@ class MonthlyLedgerRepository {
       [accountId, bounds.start, bounds.end],
     );
 
-    final monthAdvances = await _advanceTotals(
+    final monthAdvance = await _advanceTotal(
       db,
       accountId: accountId,
       whereClause: 'recorded_at >= ? AND recorded_at < ?',
@@ -80,7 +80,7 @@ class MonthlyLedgerRepository {
       'FROM milk_entries WHERE account_id = ? AND recorded_at < ?',
       [accountId, bounds.start],
     );
-    final previousAdvances = await _advanceTotals(
+    final previousAdvance = await _advanceTotal(
       db,
       accountId: accountId,
       whereClause: 'recorded_at < ?',
@@ -95,14 +95,11 @@ class MonthlyLedgerRepository {
 
     final milkTotal = (milk.first['total'] as int?) ?? 0;
     final grams = (milk.first['grams'] as int?) ?? 0;
-    final given = monthAdvances['given_to_customer'] ?? 0;
-    final received = monthAdvances['received_from_customer'] ?? 0;
-    final monthlyBalance = milkTotal + given - received;
+    final given = monthAdvance;
+    final monthlyBalance = given - milkTotal;
 
     final historicMilk = (previousMilk.first['total'] as int?) ?? 0;
-    final historicGiven = previousAdvances['given_to_customer'] ?? 0;
-    final historicReceived = previousAdvances['received_from_customer'] ?? 0;
-    final openingBalance = historicMilk + historicGiven - historicReceived;
+    final openingBalance = previousAdvance - historicMilk;
     final closingBalance = openingBalance + monthlyBalance;
 
     return {
@@ -111,37 +108,29 @@ class MonthlyLedgerRepository {
       'milk_entries': (milk.first['entries'] as int?) ?? 0,
       'no_milk_days': (noMilk.first['days'] as int?) ?? 0,
       'advance_given_paisa': given,
-      'payment_received_paisa': received,
       'balance_paisa': monthlyBalance,
       'opening_balance_paisa': openingBalance,
-      'opening_advance_paisa': openingBalance < 0 ? -openingBalance : 0,
+      'opening_advance_paisa': openingBalance > 0 ? openingBalance : 0,
       'closing_balance_paisa': closingBalance,
-      'remaining_advance_paisa': closingBalance < 0 ? -closingBalance : 0,
+      'remaining_advance_paisa': closingBalance > 0 ? closingBalance : 0,
       'month_days': DateTime(month.year, month.month + 1, 0).day,
       'average_fat': milk.first['average_fat'] as num? ?? 0,
       'fat_entries': (milk.first['fat_entries'] as int?) ?? 0,
     };
   }
 
-  Future<Map<String, int>> _advanceTotals(
+  Future<int> _advanceTotal(
     DatabaseExecutor db, {
     required String accountId,
     required String whereClause,
     required List<Object?> whereArgs,
   }) async {
     final rows = await db.rawQuery(
-      'SELECT direction, COALESCE(SUM(amount_paisa), 0) AS total '
-      'FROM advances WHERE account_id = ? AND $whereClause GROUP BY direction',
+      "SELECT COALESCE(SUM(amount_paisa), 0) AS total "
+      "FROM advances WHERE account_id = ? AND direction = 'given_to_customer' AND $whereClause",
       [accountId, ...whereArgs],
     );
-    final result = <String, int>{
-      'given_to_customer': 0,
-      'received_from_customer': 0,
-    };
-    for (final row in rows) {
-      result[row['direction'] as String] = (row['total'] as int?) ?? 0;
-    }
-    return result;
+    return (rows.first['total'] as int?) ?? 0;
   }
 
   /// Returns every activity in the selected month in chronological order.
@@ -162,7 +151,7 @@ class MonthlyLedgerRepository {
 
     final advances = await db.query(
       'advances',
-      where: 'account_id = ? AND recorded_at >= ? AND recorded_at < ?',
+      where: "account_id = ? AND direction = 'given_to_customer' AND recorded_at >= ? AND recorded_at < ?",
       whereArgs: [accountId, bounds.start, bounds.end],
       orderBy: 'recorded_at ASC',
     );
@@ -191,9 +180,7 @@ class MonthlyLedgerRepository {
             .toIso8601String();
         return <String, Object?>{
           ...row,
-          'activity_type': row['direction'] == 'given_to_customer'
-              ? 'advance'
-              : 'payment',
+          'activity_type': 'advance',
           'sort_at': localTime,
         };
       }),

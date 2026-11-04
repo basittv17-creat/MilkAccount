@@ -15,8 +15,7 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
   late Future<List<Map<String, Object?>>> _accounts;
   List<Map<String, Object?>> _rows = [];
   String? _id;
-  String _direction = 'given_to_customer';
-  DateTime _date = DateTime.now();
+    DateTime _date = DateTime.now();
   bool _saving = false;
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) => _ur ? u : widget.language == 'hi' ? h : e;
@@ -37,10 +36,10 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
     }
     setState(() => _saving = true);
     try {
-      await _repo.addAdvance(accountId: _id!, recordedAt: _date, amountPaisa: (amount * 100).round(), direction: _direction, note: _note.text);
+      await _repo.addAdvance(accountId: _id!, recordedAt: _date, amountPaisa: (amount * 100).round(), note: _note.text);
       _amount.clear(); _note.clear();
       if (mounted) setState(() {});
-      message(t('ادائیگی محفوظ ہو گئی', 'Payment saved', 'भुगतान सेव हो गया'));
+      message(t('ایڈوانس محفوظ ہو گیا', 'Advance saved', 'एडवांस सेव हो गया'));
     } catch (error) { message('Could not save: $error'); }
     finally { if (mounted) setState(() => _saving = false); }
   }
@@ -59,7 +58,7 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
     child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
-      appBar: AppBar(title: Text(t('ایڈوانس اور ادائیگیاں', 'Advance & Payments', 'एडवांस और भुगतान')), backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
+      appBar: AppBar(title: Text(t('ایڈوانس', 'Advance', 'एडवांस')), backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
       body: FutureBuilder<List<Map<String, Object?>>>(
         future: _accounts,
         builder: (context, snapshot) {
@@ -74,26 +73,18 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
     ),
   );
 
-  Widget _content() => FutureBuilder<Map<String, int>>(
-    future: _repo.totals(_id!),
+  Widget _content() => FutureBuilder<int>(
+    future: _repo.totalGiven(_id!),
     builder: (context, totalsSnapshot) {
-      final totals = totalsSnapshot.data ?? {'given_to_customer': 0, 'received_from_customer': 0};
+      final totalAdvance = totalsSnapshot.data ?? 0;
       return ListView(padding: const EdgeInsets.all(16), children: [
         DropdownButtonFormField<String>(value: _id, decoration: dec(t('گاہک کا کھاتہ', 'Customer account', 'ग्राहक खाता')), items: _rows.map((a) => DropdownMenuItem(value: a['id'] as String, child: Text('#${a['account_number']} — ${a['customer_name']}'))).toList(), onChanged: (value) => setState(() => _id = value)),
         const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _metric(t('گاہک کو دیے', 'Given to customer', 'ग्राहक को दिए'), totals['given_to_customer'], const Color(0xFFFFF2C6))),
-          const SizedBox(width: 8),
-          Expanded(child: _metric(t('گاہک سے وصول', 'Received from customer', 'ग्राहक से मिले'), totals['received_from_customer'], const Color(0xFFE0F8E8))),
-        ]),
+        _metric(t('کل ایڈوانس دیا', 'Total advance given', 'कुल एडवांस दिया'), totalAdvance, const Color(0xFFFFF2C6)),
         const SizedBox(height: 18),
-        Text(t('نئی ادائیگی درج کریں', 'Add payment', 'नया भुगतान दर्ज करें'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+        Text(t('نیا ایڈوانس درج کریں', 'Add new advance', 'नया एडवांस दर्ज करें'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        SegmentedButton<String>(segments: [
-          ButtonSegment(value: 'given_to_customer', label: Text(t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया'))),
-          ButtonSegment(value: 'received_from_customer', label: Text(t('رقم وصول', 'Payment received', 'रकम मिली'))),
-        ], selected: {_direction}, onSelectionChanged: (values) => setState(() => _direction = values.first)),
-        const SizedBox(height: 12),
+        const SizedBox(height: 2),
         TextField(controller: _amount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: dec(t('رقم (روپے)', 'Amount (Rs.)', 'रकम (रुपये)'))),
         const SizedBox(height: 10),
         Row(children: [
@@ -104,15 +95,15 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
         const SizedBox(height: 10),
         TextField(controller: _note, maxLines: 2, decoration: dec(t('تفصیل / نوٹس (اختیاری)', 'Details / note (optional)', 'विवरण / नोट (वैकल्पिक)'))),
         const SizedBox(height: 14),
-        FilledButton.icon(onPressed: _saving ? null : save, icon: const Icon(Icons.save), label: Text(_saving ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है') : t('ادائیگی محفوظ کریں', 'Save payment', 'भुगतान सेव करें')), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF079B37), foregroundColor: Colors.white)),
+        FilledButton.icon(onPressed: _saving ? null : save, icon: const Icon(Icons.save), label: Text(_saving ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है') : t('ایڈوانس محفوظ کریں', 'Save advance', 'एडवांस सेव करें')), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF079B37), foregroundColor: Colors.white)),
         const SizedBox(height: 20),
-        Text(t('ادائیگیوں کی تفصیل', 'Payment history', 'भुगतान का रिकॉर्ड'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+        Text(t('ایڈوانس کی تفصیل', 'Advance history', 'एडवांस का रिकॉर्ड'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
         FutureBuilder<List<Map<String, Object?>>>(future: _repo.history(_id!), builder: (context, history) {
           if (history.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           final rows = history.data ?? [];
-          if (rows.isEmpty) return Text(t('ابھی کوئی ادائیگی موجود نہیں', 'No payments recorded yet', 'अभी कोई भुगतान दर्ज नहीं है'));
+          if (rows.isEmpty) return Text(t('ابھی کوئی ایڈوانس موجود نہیں', 'No advances recorded yet', 'अभी कोई एडवांस दर्ज नहीं है'));
           return Column(children: rows.map((row) {
-            final given = row['direction'] == 'given_to_customer';
+            
             final dt = DateTime.tryParse(row['recorded_at'].toString())?.toLocal();
             final date = dt == null ? '' : '${dt.day}/${dt.month}/${dt.year}';
             final time = dt == null
@@ -120,7 +111,7 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
                 : '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
             final dateTime = dt == null ? '' : '$date • $time';
             final note = (row['note'] as String?) ?? '';
-            return Card(color: Colors.white, child: ListTile(leading: Icon(given ? Icons.call_made : Icons.call_received), title: Text(given ? t('گاہک کو ایڈوانس دیا', 'Advance given', 'एडवांस दिया') : t('گاہک سے رقم وصول', 'Payment received', 'रकम प्राप्त')), subtitle: Text(note.isEmpty ? dateTime : '$dateTime • $note'), trailing: Text(money(row['amount_paisa']))));
+            return Card(color: Colors.white, child: ListTile(leading: Icon(Icons.call_made), title: Text(t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')), subtitle: Text(note.isEmpty ? dateTime : '$dateTime • $note'), trailing: Text(money(row['amount_paisa']))));
           }).toList());
         }),
       ]);

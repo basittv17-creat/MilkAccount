@@ -13,7 +13,7 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  test('monthly reports aggregate milk, payments, customers and days', () async {
+  test('monthly reports aggregate milk, advances, customers and days', () async {
     // Keep this fixture in a unique month so other tests cannot affect totals.
     const reportYear = 2098;
     const reportMonth = 11;
@@ -36,14 +36,13 @@ void main() {
       accountId: id,
       recordedAt: DateTime(reportYear, reportMonth, 3),
       amountPaisa: 1000,
-      direction: 'received_from_customer',
     );
     final repo = ReportsRepository();
     final month = DateTime(reportYear, reportMonth);
     final summary = await repo.summary(month);
     expect(summary['milk_amount_paisa'], 20000);
-    expect(summary['payment_received_paisa'], 1000);
-    expect(summary['balance_paisa'], 19000);
+    expect(summary['advance_given_paisa'], 1000);
+    expect(summary['balance_paisa'], -19000);
     final customerRows = await repo.customerTotals(month);
     expect(customerRows.firstWhere((row) => row['id'] == id)['entries'], 1);
     expect((await repo.dailyTotals(month)).single['quantity_grams'], 2000);

@@ -19,23 +19,22 @@ class HomeDashboardRepository {
       'FROM milk_entries WHERE recorded_at >= ? AND recorded_at < ?',
       [start.toUtc().toIso8601String(), end.toUtc().toIso8601String()],
     );
-    final advances = await db.rawQuery(
-      'SELECT direction, COALESCE(SUM(amount_paisa), 0) AS amount '
-      'FROM advances GROUP BY direction',
+    final advanceRows = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount_paisa), 0) AS amount FROM advances "
+      "WHERE direction = 'given_to_customer'",
     );
-    var given = 0;
-    var received = 0;
-    for (final row in advances) {
-      if (row['direction'] == 'given_to_customer') given = row['amount'] as int;
-      if (row['direction'] == 'received_from_customer') received = row['amount'] as int;
-    }
+    final milkRows = await db.rawQuery(
+      'SELECT COALESCE(SUM(total_paisa), 0) AS amount FROM milk_entries',
+    );
+    final given = (advanceRows.first['amount'] as int?) ?? 0;
+    final allMilk = (milkRows.first['amount'] as int?) ?? 0;
     final month = DateTime(now.year, now.month);
     return {
       'today_amount_paisa': today.first['amount'] as int,
       'today_quantity_grams': today.first['grams'] as int,
       'today_entries': today.first['entries'] as int,
       'advance_given_paisa': given,
-      'remaining_advance_paisa': given - received,
+      'remaining_advance_paisa': given - allMilk,
       'month_summary': await _reports.summary(month),
       'daily_totals': await _reports.dailyTotals(month),
     };

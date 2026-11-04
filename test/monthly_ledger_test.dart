@@ -9,19 +9,18 @@ import 'package:milk_account/data/no_milk_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() { sqfliteFfiInit(); databaseFactory = databaseFactoryFfi; });
-  test('monthly ledger totals milk, advances and received payments for selected month', () async {
+  test('Rs. 10000 advance minus Rs. 500 milk leaves Rs. 9500 advance', () async {
     await AccountRepository().createAccount(customerName: 'Phase7 Ledger Customer', startAt: DateTime(2026,11,1), milkRatePaisa: 10000);
     final db = await AppDatabase.instance.database;
     final a = (await db.query('accounts', where: 'customer_name = ?', whereArgs: ['Phase7 Ledger Customer'])).single;
     final id = a['id'] as String;
-    await MilkEntryRepository().createEntry(accountId: id, recordedAt: DateTime(2026,11,3), quantityGrams: 2000, ratePaisaPerKg: 10000);
-    await AdvanceRepository().addAdvance(accountId: id, recordedAt: DateTime(2026,11,3), amountPaisa: 50000, direction: 'given_to_customer');
-    await AdvanceRepository().addAdvance(accountId: id, recordedAt: DateTime(2026,11,3), amountPaisa: 2500, direction: 'received_from_customer');
+    await MilkEntryRepository().createEntry(accountId: id, recordedAt: DateTime(2026,11,3), quantityGrams: 2000, ratePaisaPerKg: 25000);
+    await AdvanceRepository().addAdvance(accountId: id, recordedAt: DateTime(2026,11,3), amountPaisa: 1000000);
     final result = await MonthlyLedgerRepository().summary(accountId: id, month: DateTime(2026,11));
-    expect(result['milk_total_paisa'], 20000);
-    expect(result['advance_given_paisa'], 50000);
-    expect(result['payment_received_paisa'], 2500);
-    expect(result['balance_paisa'], 67500);
+    expect(result['milk_total_paisa'], 50000);
+    expect(result['advance_given_paisa'], 1000000);
+    expect(result['balance_paisa'], 950000);
+    expect(result['remaining_advance_paisa'], 950000);
     expect(result['milk_quantity_grams'], 2000);
     await AppDatabase.instance.close();
   });
@@ -83,7 +82,6 @@ void main() {
       accountId: id,
       recordedAt: DateTime(2026, 1, 5, 8),
       amountPaisa: 2000000,
-      direction: 'received_from_customer',
     );
     await milk.createEntry(
       accountId: id,
@@ -103,13 +101,11 @@ void main() {
       accountId: id,
       recordedAt: DateTime(2026, 2, 2, 9),
       amountPaisa: 1000000,
-      direction: 'received_from_customer',
     );
     await payments.addAdvance(
       accountId: id,
       recordedAt: DateTime(2026, 2, 3, 10),
       amountPaisa: 20000,
-      direction: 'given_to_customer',
     );
     await NoMilkRepository().markNoMilk(
       accountId: id,
@@ -126,7 +122,8 @@ void main() {
     expect(summary['milk_quantity_grams'], 73500);
     expect(summary['milk_total_paisa'], 1837500);
     expect(summary['opening_advance_paisa'], 1000000);
-    expect(summary['remaining_advance_paisa'], 142500);
+    expect(summary['remaining_advance_paisa'], 0);
+    expect(summary['balance_paisa'], -817500);
     expect(summary['month_days'], 28);
     expect((summary['average_fat'] as num).toDouble(), 4.5);
     expect(summary['fat_entries'], 1);
@@ -137,7 +134,7 @@ void main() {
       month: DateTime(2026, 2),
     );
     expect(activities.map((row) => row['activity_type']).toList(),
-        ['milk', 'payment', 'advance', 'naga']);
+        ['milk', 'advance', 'naga']);
     expect(activities.last['note'], 'Customer away');
 
     await ledger.updateFatEnabled(accountId: id, enabled: false);

@@ -180,7 +180,6 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
       t('شروعاتی ایڈوانس', 'Opening advance', 'शुरुआती एडवांस') + ': ' + _money(summary['opening_advance_paisa']),
       t('بقایا ایڈوانس', 'Remaining advance', 'बाकी एडवांस') + ': ' + _money(summary['remaining_advance_paisa']),
       t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया') + ': ' + _money(summary['advance_given_paisa']),
-      t('رقم وصول', 'Payments received', 'प्राप्त भुगतान') + ': ' + _money(summary['payment_received_paisa']),
       t('ناگا کے دن', 'No-milk days', 'नागा दिन') + ': ' + (summary['no_milk_days'] ?? 0).toString(),
       '',
       t('روزانہ کی مکمل تفصیل', 'Complete daily details', 'पूरी दैनिक जानकारी'),
@@ -206,10 +205,8 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
             t('ناگا', 'No milk', 'नागा') + ' | ' +
             (row['note'] ?? '').toString());
       } else {
-        final label = type == 'advance'
-            ? t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')
-            : t('رقم وصول', 'Payment received', 'रकम प्राप्त');
-        lines.add(date + ' ' + time + ' | ' + label + ' | ' +
+        lines.add(date + ' ' + time + ' | ' +
+            t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया') + ' | ' +
             _money(row['amount_paisa']) + ' | ' + (row['note'] ?? '').toString());
       }
     }
@@ -525,7 +522,6 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
       final isMilk = type == 'milk';
       final isNaga = type == 'naga';
       final isAdvance = type == 'advance';
-      final isPayment = type == 'payment';
       final date = isNaga
           ? row['day'].toString().substring(0, 10)
           : _dateFor(row['recorded_at']);
@@ -535,9 +531,8 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
 
       final milkTotal = (row['total_paisa'] as int?) ?? 0;
       final amount = (row['amount_paisa'] as int?) ?? 0;
-      if (isMilk) runningBalance += milkTotal;
       if (isAdvance) runningBalance += amount;
-      if (isPayment) runningBalance -= amount;
+      if (isMilk) runningBalance -= milkTotal;
 
       final milkValue = isMilk
           ? ((row['quantity_grams'] as int) / 1000).toStringAsFixed(1)
@@ -565,7 +560,6 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
           DataCell(Text(fat)),
           DataCell(Text(isMilk ? _money(milkTotal) : '—')),
           DataCell(Text(isAdvance ? _money(amount) : '—')),
-          DataCell(Text(isPayment ? _money(amount) : '—')),
           DataCell(Text(_money(runningBalance), style: const TextStyle(fontWeight: FontWeight.w900))),
         ],
       ));
@@ -587,7 +581,6 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
           const DataColumn(label: Text('FAT %')),
           DataColumn(label: Text(t('دودھ قیمت', 'Milk amount', 'दूध रकम'))),
           DataColumn(label: Text(t('ایڈوانس', 'Advance', 'एडवांस'))),
-          DataColumn(label: Text(t('وصولی', 'Received', 'प्राप्त'))),
           DataColumn(label: Text(t('بقایا', 'Balance', 'बाकी'))),
         ],
         rows: rows,
