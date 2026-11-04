@@ -52,10 +52,10 @@ class _SplashScreenState extends State<SplashScreen> {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.all(Radius.circular(25)),
                       child: Image.asset(
-                        'assets/images/milk_account_dairy_hero.jpg',
+                        'assets/images/milk_account_logo.png',
                         width: double.infinity,
                         height: double.infinity,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Icon(
                           Icons.local_drink_rounded,
                           size: 110,
