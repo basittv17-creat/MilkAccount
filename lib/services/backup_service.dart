@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../data/app_database.dart';
@@ -11,25 +13,46 @@ class BackupService {
 
   final AppDatabase _database;
 
-  Future<String?> exportBackup() async {
+  /// Reads a consistent SQLite snapshot after checkpointing and closing the DB.
+  /// The database is reopened before this method returns.
+  Future<Uint8List> createBackupBytes() async {
     final db = await _database.database;
     await db.rawQuery('PRAGMA wal_checkpoint(FULL)');
     final databasePath = await _database.getDatabasePath();
-    final destination = await FilePicker.platform.saveFile(
+
+    await _database.close();
+    try {
+      return await File(databasePath).readAsBytes();
+    } finally {
+      await _database.database;
+    }
+  }
+
+  Future<String?> exportBackup() async {
+    final bytes = await createBackupBytes();
+    return FilePicker.platform.saveFile(
       dialogTitle: 'Save Milk Account backup',
       fileName: 'milk_account_backup.db',
       type: FileType.custom,
       allowedExtensions: ['db'],
+      bytes: bytes,
     );
-    if (destination == null || destination.trim().isEmpty) return null;
+  }
 
-    await _database.close();
-    try {
-      await File(databasePath).copy(destination);
-      return destination;
-    } finally {
-      await _database.database;
-    }
+  /// Opens Android/iOS share sheet so the backup can be sent through Gmail,
+  /// Bluetooth, Nearby Share, messaging apps, or another available target.
+  Future<void> shareBackup() async {
+    final bytes = await createBackupBytes();
+    await Share.shareXFiles(
+      [
+        XFile.fromData(
+          bytes,
+          name: 'milk_account_backup.db',
+          mimeType: 'application/vnd.sqlite3',
+        ),
+      ],
+      text: 'Milk Account database backup. Import this file in Milk Account on the other device.',
+    );
   }
 
   Future<bool> restoreBackup() async {
@@ -38,44 +61,61 @@ class BackupService {
       type: FileType.custom,
       allowedExtensions: ['db'],
       allowMultiple: false,
-      withData: false,
+      withData: true,
     );
     if (selection == null || selection.files.isEmpty) return false;
-    final sourcePath = selection.files.single.path;
+
+    final selected = selection.files.single;
+    var sourcePath = selected.path;
+    File? temporarySource;
+    if (sourcePath == null && selected.bytes != null) {
+      temporarySource = File(
+        Directory.systemTemp.path + '/milk_account_restore_' + DateTime.now().microsecondsSinceEpoch.toString() + '.db',
+      );
+      await temporarySource.writeAsBytes(selected.bytes!, flush: true);
+      sourcePath = temporarySource.path;
+    }
     if (sourcePath == null) {
       throw const FormatException('The selected backup file cannot be accessed.');
     }
 
-    final source = File(sourcePath);
-    if (!await source.exists() || !await _isValidDatabase(sourcePath)) {
-      throw const FormatException('This is not a valid Milk Account database backup.');
-    }
-
-    final databasePath = await _database.getDatabasePath();
-    final safetyCopyPath = '$databasePath.before-restore-backup';
-    await _database.close();
     try {
-      final current = File(databasePath);
-      if (await current.exists()) {
-        await current.copy(safetyCopyPath);
+      final source = File(sourcePath);
+      if (!await source.exists() || !await _isValidDatabase(sourcePath)) {
+        throw const FormatException('This is not a valid Milk Account database backup.');
       }
-      await _removeSidecarFiles(databasePath);
-      await source.copy(databasePath);
-      final restored = await _database.database;
-      final check = await restored.rawQuery('PRAGMA integrity_check');
-      if (check.isEmpty || check.first.values.first != 'ok') {
-        throw const FormatException('The restored database failed its integrity check.');
-      }
-      return true;
-    } catch (_) {
+
+      final databasePath = await _database.getDatabasePath();
+      final safetyCopyPath = '$databasePath.before-restore-' +
+          DateTime.now().microsecondsSinceEpoch.toString() + '.db';
       await _database.close();
-      final safetyCopy = File(safetyCopyPath);
-      if (await safetyCopy.exists()) {
+      try {
+        final current = File(databasePath);
+        if (await current.exists()) {
+          await current.copy(safetyCopyPath);
+        }
         await _removeSidecarFiles(databasePath);
-        await safetyCopy.copy(databasePath);
+        await source.copy(databasePath);
+        final restored = await _database.database;
+        final check = await restored.rawQuery('PRAGMA integrity_check');
+        if (check.isEmpty || check.first.values.first != 'ok') {
+          throw const FormatException('The restored database failed its integrity check.');
+        }
+        return true;
+      } catch (_) {
+        await _database.close();
+        final safetyCopy = File(safetyCopyPath);
+        if (await safetyCopy.exists()) {
+          await _removeSidecarFiles(databasePath);
+          await safetyCopy.copy(databasePath);
+        }
+        await _database.database;
+        rethrow;
       }
-      await _database.database;
-      rethrow;
+    } finally {
+      if (temporarySource != null && await temporarySource.exists()) {
+        await temporarySource.delete();
+      }
     }
   }
 

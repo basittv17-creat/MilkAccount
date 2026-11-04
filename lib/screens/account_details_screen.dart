@@ -130,8 +130,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       '',
       '${t('کل دودھ', 'Total milk', 'कुल दूध')}: ${(grams / 1000).toStringAsFixed(3)} kg',
       '${t('دودھ کی کل رقم', 'Milk amount', 'दूध की रकम')}: ${_money(milk)}',
-      '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
-      '${t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडوانس')}: ${_money(advances - milk)}',
+      if (advances > 0)
+        '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
+      if (advances > 0)
+        '${t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडوانس')}: ${_money((advances - milk).clamp(0, advances))}',
       '${t('ناگا کے دن', 'No-milk days', 'नागा दिन')}: $noMilkDays',
       '',
       t('مکمل روزانہ تفصیل', 'Complete daily details', 'पूरी दैनिक जानकारी'),
@@ -381,89 +383,271 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    child: SafeArea(top: false, child: Scaffold(
-      backgroundColor: const Color(0xFFF3F9FF),
-      appBar: AppBar(title: Text(t('اکاؤنٹ کی مکمل تفصیل','Complete Account Ledger','खाते का पूरा विवरण')),
-        backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
-      body: FutureBuilder<Map<String, Object?>?>(
-        future: _account,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          final a = snapshot.data;
-          if (snapshot.hasError || a == null) return Center(child: Text(t('اکاؤنٹ نہیں ملا','Account not found','खाता नहीं मिला')));
-          _accountValue = a;
-          final rate = ((a['milk_rate_paisa'] as int? ?? 0) / 100).toStringAsFixed(2);
-          return ListView(padding: const EdgeInsets.all(14), children: [
-            Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(15), child: Column(children: [
-              CircleAvatar(radius: 30, backgroundColor: const Color(0xFFE0F8E8),
-                child: Text(a['account_number'].toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF087B32)))),
-              const SizedBox(height: 8),
-              Text(a['customer_name']?.toString() ?? '', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
-              const Divider(),
-              _info(t('والد کا نام','Father name','पिता का नाम'), a['father_name']?.toString() ?? ''),
-              _info(t('فون نمبر','Phone','फ़ोन'), '${a['country_code'] ?? ''} ${a['phone_number'] ?? ''}'),
-              _info(t('شروع ہونے کی تاریخ','Account started','खाता शुरू'), _date(_local(a['start_at']) ?? DateTime.now())),
-              _info(t('موجودہ دودھ ریٹ فی کلو','Current milk rate/kg','दूध का रेट/kg'), 'Rs. $rate'),
-              Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: () => _edit(a), icon: const Icon(Icons.edit), label: Text(t('اکاؤنٹ میں ترمیم','Edit account','खाता संपादित करें')))),
-            ]))),
-            const SizedBox(height: 10),
-            Text(t('حساب دیکھنے کا دورانیہ','Choose ledger period','खाते की अवधि चुनें'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Wrap(spacing: 7, runSpacing: 7, children: [
-              _choice(_ActivityRange.month, t('یہ مہینہ','This month','यह महीना')),
-              _choice(_ActivityRange.last15Days, t('پچھلے 15 دن','Last 15 days','पिछले 15 दिन')),
-              _choice(_ActivityRange.all, t('شروع سے آخر تک','From start to end','शुरू से अब तक')),
-              _choice(_ActivityRange.custom, t('اپنی تاریخیں','Custom dates','अपनी तारीखें')),
-            ]),
-            if (_range == _ActivityRange.month)
-              OutlinedButton.icon(onPressed: _pickMonth, icon: const Icon(Icons.calendar_month), label: Text('${_month.year}/${_month.month.toString().padLeft(2, '0')}')),
-            if (_range == _ActivityRange.custom)
-              Row(children: [
-                Expanded(child: OutlinedButton(onPressed: () => _pickCustom(true), child: Text('${t('شروع','From','से')}: ${_date(_from)}'))),
-                const SizedBox(width: 7),
-                Expanded(child: OutlinedButton(onPressed: () => _pickCustom(false), child: Text('${t('آخر','To','तक')}: ${_date(_to)}'))),
-              ]),
-            const SizedBox(height: 8),
-            FutureBuilder<List<Map<String, Object?>>>(
-              future: _records,
-              builder: (context, records) {
-                if (records.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-                if (records.hasError) return Text(records.error.toString());
-                final list = records.data ?? [];
-                var milk = 0, grams = 0, advances = 0;
-                for (final row in list) {
-                  switch (row['activity_type']) {
-                    case 'milk': milk += row['total_paisa'] as int; grams += row['quantity_grams'] as int;
-                    case 'advance': advances += row['amount_paisa'] as int;
-                  }
-                }
-                final balance = advances - milk;
-                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Card(color: const Color(0xFFDFF1FF), child: Padding(padding: const EdgeInsets.all(12), child: Wrap(
-                    alignment: WrapAlignment.spaceBetween, spacing: 12, runSpacing: 10, children: [
-                      _total(t('دودھ کی رقم','Milk total','दूध रकम'), _money(milk)),
-                      _total(t('دودھ کی مقدار','Milk quantity','दूध मात्रा'), '${(grams / 1000).toStringAsFixed(3)} kg'),
-                      _total(t('ایڈوانس دیا','Advance given','एडवांस दिया'), _money(advances)),
-                                            _total(t('باقی ایڈوانس','Remaining advance','बाकी एडوانس'), _money(balance)),
-                    ]))),
-                  Text(t('ماہانہ دودھ اور ایڈوانس کا مکمل حساب','Complete monthly milk and advance ledger','मासिक दूध और एडवांस का पूरा हिसाब'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  _ledgerTable(list),
-                  _reportActions(a, list),
-                ]);
-              },
+    child: SafeArea(
+      top: false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFE3E7F0),
+        appBar: AppBar(
+          title: Text(t('اکاؤنٹ کی مکمل تفصیل', 'Complete Account Ledger', 'खाते का पूरा विवरण')),
+          backgroundColor: const Color(0xFF0649AE),
+          foregroundColor: Colors.white,
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFFF0F3FA), Color(0xFFD1D5E2)],
             ),
-          ]);
-        },
+          ),
+          child: FutureBuilder<Map<String, Object?>?>(
+            future: _account,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+              final a = snapshot.data;
+              if (snapshot.hasError || a == null) return Center(child: Text(t('اکاؤنٹ نہیں ملا', 'Account not found', 'खाता नहीं मिला')));
+              _accountValue = a;
+              final rate = ((a['milk_rate_paisa'] as int? ?? 0) / 100).toStringAsFixed(2);
+              final phone = '${a['country_code'] ?? ''} ${a['phone_number'] ?? ''}'.trim();
+              final flag = (a['country_code']?.toString() ?? '+92') == '+92' ? '🇵🇰' : '🌐';
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(18, 9, 18, 22),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(17, 20, 17, 18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: [Color(0xFFF8FAFF), Color(0xFFDDE1EC)],
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFFFFFFFF), blurRadius: 13, offset: Offset(-5, -5)),
+                        BoxShadow(color: Color(0x55818A9F), blurRadius: 15, offset: Offset(6, 8)),
+                      ],
+                    ),
+                    child: Column(children: [
+                      CircleAvatar(
+                        radius: 44, backgroundColor: const Color(0xFFDDF6E8),
+                        child: Text(a['account_number'].toString(),
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF087B32))),
+                      ),
+                      const SizedBox(height: 13),
+                      Text(a['customer_name']?.toString() ?? '', textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 29, fontWeight: FontWeight.w900, color: Color(0xFF111318))),
+                      const SizedBox(height: 2),
+                      Text('${t('والد:', 'Father:', 'पिता:')} ${a['father_name']?.toString() ?? ''}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: Color(0xFF20232B))),
+                      const Padding(padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Divider(color: Color(0xFFBFC4D0), height: 1)),
+                      _detailRow(t('فون نمبر', 'Phone number', 'फ़ोन नंबर'),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Colors.white, Color(0xFFE2E6F0)]),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: const Color(0xFFB9BFCE), width: 1.4),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.white, blurRadius: 5, offset: Offset(-2, -2)),
+                              BoxShadow(color: Color(0x33818A9F), blurRadius: 5, offset: Offset(2, 3)),
+                            ],
+                          ),
+                          child: Directionality(textDirection: TextDirection.ltr,
+                            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                              Text(flag, style: const TextStyle(fontSize: 25)),
+                              const SizedBox(width: 6),
+                              Flexible(child: FittedBox(fit: BoxFit.scaleDown,
+                                child: Text(phone, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)))),
+                              const SizedBox(width: 5),
+                              const Icon(Icons.call, color: Color(0xFF66759A), size: 22),
+                            ]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                      _detailRow(t('شروع ہونے کی تاریخ', 'Account start date', 'खाता शुरू होने की तारीख'),
+                        Directionality(textDirection: TextDirection.ltr,
+                          child: Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+                            Text(_date(_local(a['start_at']) ?? DateTime.now()),
+                              style: const TextStyle(fontSize: 20, fontStyle: FontStyle.italic, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 9),
+                            const Icon(Icons.calendar_month, color: Color(0xFF8A755B), size: 27),
+                          ]),
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                      _detailRow(t('موجودہ دودھ ریٹ فی کلو', 'Current milk rate/kg', 'दूध का मौजूदा रेट/kg'),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                          decoration: BoxDecoration(color: const Color(0xFFE8EBF3),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFAEB5C5), width: 1.3)),
+                          child: Directionality(textDirection: TextDirection.ltr,
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Text('🥛', style: TextStyle(fontSize: 26)),
+                              const SizedBox(width: 8),
+                              Text('Rs. ${rate}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                            ]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 17),
+                      _softButton(onPressed: () => _edit(a),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text(t('اکاؤنٹ میں ترمیم', 'Edit account', 'खाता संपादित करें'),
+                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                          const SizedBox(width: 9),
+                          const Icon(Icons.edit, color: Color(0xFF45577E), size: 23),
+                        ]),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 25),
+                  Text(t('حساب دیکھنے کا دورانیہ', 'Choose ledger period', 'खाते की अवधि चुनें'),
+                    style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Color(0xFF111318))),
+                  const SizedBox(height: 13),
+                  Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+                    _choice(_ActivityRange.month, t('یہ مہینہ', 'This month', 'यह महीना')),
+                    _choice(_ActivityRange.last15Days, t('پچھلے 15 دن', 'Last 15 days', 'पिछले 15 दिन')),
+                    _choice(_ActivityRange.all, t('شروع سے آخر تک', 'From start to end', 'शुरू से अब तक')),
+                    _choice(_ActivityRange.custom, t('اپنی تاریخیں', 'Custom dates', 'अपनी तारीखें')),
+                  ]),
+                  if (_range == _ActivityRange.month)
+                    Padding(padding: const EdgeInsets.only(top: 13),
+                      child: _softButton(onPressed: _pickMonth, radius: 40,
+                        child: Directionality(textDirection: TextDirection.ltr,
+                          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            Text('${_month.year}/${_month.month.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF435A83))),
+                            const SizedBox(width: 12),
+                            const Icon(Icons.calendar_month, color: Color(0xFF435A83), size: 25),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  if (_range == _ActivityRange.custom)
+                    Padding(padding: const EdgeInsets.only(top: 13),
+                      child: Row(children: [
+                        Expanded(child: _softButton(onPressed: () => _pickCustom(true),
+                          child: Text('${t('شروع', 'From', 'से')}: ${_date(_from)}'))),
+                        const SizedBox(width: 9),
+                        Expanded(child: _softButton(onPressed: () => _pickCustom(false),
+                          child: Text('${t('آخر', 'To', 'तक')}: ${_date(_to)}'))),
+                      ]),
+                    ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<List<Map<String, Object?>>>(future: _records, builder: (context, records) {
+                    if (records.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+                    if (records.hasError) return Text(records.error.toString());
+                    final list = records.data ?? [];
+                    var milk = 0, grams = 0, advances = 0;
+                    for (final row in list) {
+                      switch (row['activity_type']) {
+                        case 'milk':
+                          milk += row['total_paisa'] as int;
+                          grams += row['quantity_grams'] as int;
+                        case 'advance':
+                          advances += row['amount_paisa'] as int;
+                      }
+                    }
+                    final hasAdvance = advances > 0;
+                    final remainingAdvance = (advances - milk).clamp(0, advances);
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFFF6F8FD), Color(0xFFE1E5EF)]),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white, width: 1.2),
+                          boxShadow: const [BoxShadow(color: Color(0x33818A9F), blurRadius: 9, offset: Offset(3, 4))],
+                        ),
+                        child: Wrap(alignment: WrapAlignment.spaceBetween, spacing: 12, runSpacing: 12, children: [
+                          _total(t('دودھ کی رقم', 'Milk total', 'दूध रकम'), _money(milk)),
+                          _total(t('دودھ کی مقدار', 'Milk quantity', 'दूध मात्रा'), '${(grams / 1000).toStringAsFixed(3)} kg'),
+                          if (hasAdvance) _total(t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया'), _money(advances)),
+                          if (hasAdvance) _total(t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडवांस'), _money(remainingAdvance)),
+                        ]),
+                      ),
+                      const SizedBox(height: 13),
+                      Text(t('ماہانہ دودھ اور ایڈوانس کا مکمل حساب', 'Complete monthly milk and advance ledger', 'मासिक दूध और एडवांस का पूरा हिसाब'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                      _ledgerTable(list),
+                      _reportActions(a, list),
+                    ]);
+                  }),
+                ],
+              );
+            },
+          ),
+        ),
       ),
-    )),
+    ),
   );
 
-  Widget _choice(_ActivityRange value, String label) => ChoiceChip(
-    label: Text(label), selected: _range == value,
-    onSelected: (_) => setState(() { _range = value; _refresh(); }));
+  Widget _detailRow(String label, Widget value) => Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Expanded(flex: 5, child: Text(label, style: const TextStyle(fontSize: 18, color: Color(0xFF333B4C), height: 1.5))),
+      const SizedBox(width: 8),
+      Expanded(flex: 6, child: Align(alignment: Alignment.centerLeft, child: value)),
+    ],
+  );
 
-  Widget _info(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(children: [Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF52677D)))), Expanded(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w600)))]));
+  Widget _softButton({required VoidCallback onPressed, required Widget child, double radius = 18}) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(radius),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFFF9FAFF), Color(0xFFDDE1EC)]),
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: Colors.white, width: 1.5),
+          boxShadow: const [
+            BoxShadow(color: Colors.white, blurRadius: 7, offset: Offset(-3, -3)),
+            BoxShadow(color: Color(0x55818A9F), blurRadius: 8, offset: Offset(4, 5)),
+          ],
+        ),
+        child: Center(child: child),
+      ),
+    ),
+  );
+
+  Widget _choice(_ActivityRange value, String label) {
+    final selected = _range == value;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => setState(() { _range = value; _refresh(); }),
+        borderRadius: BorderRadius.circular(17),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+          decoration: BoxDecoration(
+            gradient: selected
+              ? const LinearGradient(colors: [Color(0xFFFFFDF5), Color(0xFFE8E2D3)])
+              : const LinearGradient(colors: [Color(0xFFF9FAFF), Color(0xFFDDE1EC)]),
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: selected ? const Color(0xFFC7AC63) : Colors.white, width: selected ? 2 : 1.4),
+            boxShadow: [
+              BoxShadow(color: Colors.white.withOpacity(.9), blurRadius: 6, offset: const Offset(-3, -3)),
+              const BoxShadow(color: Color(0x55818A9F), blurRadius: 7, offset: Offset(3, 4)),
+            ],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            if (selected) ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.check, color: Color(0xFF62563A), size: 21),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _total(String label, String value) => SizedBox(width: 145, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Text(label, style: const TextStyle(fontSize: 12)), const SizedBox(height: 3), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]));
 

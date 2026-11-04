@@ -21,6 +21,9 @@ class _BackupScreenState extends State<BackupScreen> {
         'title': 'بیک اپ اور ڈیٹا منتقلی',
         'description': 'اپنے تمام کھاتوں، دودھ کی انٹریوں، ادائیگیوں اور ناگا کا ڈیٹا محفوظ کریں یا واپس بحال کریں۔',
         'export': 'بیک اپ محفوظ کریں',
+        'share': 'بیک اپ جی میل یا دوسرے موبائل پر بھیجیں',
+        'shared': 'بیک اپ شیئر کرنے کے لیے ایپس کھول دی گئی ہیں۔',
+        'transferHelp': 'دوسرے موبائل پر یہ فائل وصول کریں، پھر وہاں بیک اپ سے ڈیٹا بحال کریں۔',
         'import': 'بیک اپ سے ڈیٹا بحال کریں',
         'warning': 'بحالی کے دوران موجودہ ڈیٹا کی حفاظتی کاپی بھی بنائی جائے گی۔',
         'saved': 'بیک اپ کامیابی سے محفوظ ہو گیا۔',
@@ -36,6 +39,9 @@ class _BackupScreenState extends State<BackupScreen> {
         'title': 'Backup & Data Transfer',
         'description': 'Save or restore all accounts, milk entries, payments and no-milk days.',
         'export': 'Save Backup',
+        'share': 'Share backup by Gmail or to another device',
+        'shared': 'The sharing apps have been opened for your backup.',
+        'transferHelp': 'Receive this file on the other device, then choose Restore from Backup there.',
         'import': 'Restore from Backup',
         'warning': 'A safety copy of the current database is kept before restoring.',
         'saved': 'Backup saved successfully.',
@@ -51,6 +57,9 @@ class _BackupScreenState extends State<BackupScreen> {
         'title': 'बैकअप और डेटा ट्रांसफर',
         'description': 'सभी खाते, दूध की एंट्री, भुगतान और नागा का डेटा सुरक्षित करें या वापस लाएँ।',
         'export': 'बैकअप सेव करें',
+        'share': 'जीमेल या दूसरे मोबाइल पर बैकअप भेजें',
+        'shared': 'बैकअप शेयर करने के लिए ऐप्स खोल दिए गए हैं।',
+        'transferHelp': 'दूसरे मोबाइल पर यह फ़ाइल लें, फिर वहाँ बैकअप से डेटा वापस लाएँ।',
         'import': 'बैकअप से डेटा वापस लाएँ',
         'warning': 'डेटा वापस लाने से पहले मौजूदा डेटाबेस की सुरक्षा कॉपी रखी जाएगी।',
         'saved': 'बैकअप सफलतापूर्वक सेव हो गया।',
@@ -82,6 +91,13 @@ class _BackupScreenState extends State<BackupScreen> {
     final path = await _service.exportBackup();
     if (!mounted) return;
     _message(path == null ? _text('cancelled') : _text('saved'));
+  }
+
+  Future<void> _share() async {
+    await _run(() async {
+      await _service.shareBackup();
+      if (mounted) _message(_text('shared'));
+    });
   }
 
   Future<void> _restore() async {
@@ -134,11 +150,23 @@ class _BackupScreenState extends State<BackupScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, height: 1.5),
             ),
+            const SizedBox(height: 10),
+            Text(
+              _text('transferHelp'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.blueGrey, height: 1.4),
+            ),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _busy ? null : () => _run(_export),
               icon: const Icon(Icons.save_alt_rounded),
               label: Text(_text('export')),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _share,
+              icon: const Icon(Icons.share_rounded),
+              label: Text(_text('share')),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
