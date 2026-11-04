@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data/account_repository.dart';
 import '../data/account_activity_repository.dart';
 import 'new_account_screen.dart';
+import '../services/report_export_service.dart';
 
 enum _ActivityRange { month, last15Days, all, custom }
 
@@ -16,6 +18,8 @@ class AccountDetailsScreen extends StatefulWidget {
 class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   final _accounts = AccountRepository();
   final _activity = AccountActivityRepository();
+  final _export = ReportExportService();
+  bool _exporting = false;
   late Future<Map<String, Object?>?> _account;
   late Future<List<Map<String, Object?>>> _records;
   _ActivityRange _range = _ActivityRange.month;
@@ -98,6 +102,180 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   String _money(Object? value) => 'Rs. ${(((value as int?) ?? 0) / 100).toStringAsFixed(2)}';
   DateTime? _local(Object? value) => DateTime.tryParse(value?.toString() ?? '')?.toLocal();
 
+  String _reportText(Map<String, Object?> account,
+      List<Map<String, Object?>> records) {
+    var milk = 0;
+    var grams = 0;
+    var advances = 0;
+    var received = 0;
+    var noMilkDays = 0;
+
+    for (final row in records) {
+      switch (row['activity_type']) {
+        case 'milk':
+          milk += (row['total_paisa'] as int?) ?? 0;
+          grams += (row['quantity_grams'] as int?) ?? 0;
+        case 'advance':
+          advances += (row['amount_paisa'] as int?) ?? 0;
+        case 'payment':
+          received += (row['amount_paisa'] as int?) ?? 0;
+        case 'naga':
+          noMilkDays++;
+      }
+    }
+
+    final lines = <String>[
+      'Milk Account — ${account['customer_name'] ?? ''}',
+      '${t('کھاتہ نمبر', 'Account number', 'खाता नंबर')}: ${account['account_number'] ?? ''}',
+      '${t('والد کا نام', 'Father name', 'पिता का नाम')}: ${account['father_name'] ?? ''}',
+      '${t('فون نمبر', 'Phone', 'फ़ोन')}: ${account['country_code'] ?? ''} ${account['phone_number'] ?? ''}',
+      '${t('مدت', 'Period', 'अवधि')}: ${_date(_start)} — ${_date(_end)}',
+      '',
+      '${t('کل دودھ', 'Total milk', 'कुल दूध')}: ${(grams / 1000).toStringAsFixed(3)} kg',
+      '${t('دودھ کی کل رقم', 'Milk amount', 'दूध की रकम')}: ${_money(milk)}',
+      '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
+      '${t('رقم وصول', 'Payments received', 'प्राप्त भुगतान')}: ${_money(received)}',
+      '${t('باقی بیلنس', 'Remaining balance', 'बाकी बैलेंस')}: ${_money(milk + advances - received)}',
+      '${t('ناگا کے دن', 'No-milk days', 'नागा दिन')}: $noMilkDays',
+      '',
+      t('مکمل روزانہ تفصیل', 'Complete daily details', 'पूरी दैनिक जानकारी'),
+    ];
+
+    for (final row in records) {
+      final type = row['activity_type'];
+      final isMilk = type == 'milk';
+      final isNaga = type == 'naga';
+      final isAdvance = type == 'advance';
+      final dt = isNaga ? null : _local(row['recorded_at']);
+      final day = isNaga ? DateTime.tryParse(row['day'].toString()) : dt;
+      final date = day == null ? '—' : _date(day);
+      final time = isNaga
+          ? (row['recorded_time'] ?? '00:00').toString()
+          : dt == null
+              ? ''
+              : '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+      String detail;
+      String amount;
+      if (isMilk) {
+        detail = '${(row['quantity_grams'] as int) / 1000} kg • FAT: ${row['fat_value'] ?? '—'} • ${t('ریٹ', 'Rate', 'रेट')}: ${_money(row['rate_paisa_per_kg'])}/kg';
+        amount = _money(row['total_paisa']);
+      } else if (isNaga) {
+        detail = row['note']?.toString() ?? '';
+        amount = '—';
+      } else {
+        detail = row['note']?.toString() ?? '';
+        amount = _money(row['amount_paisa']);
+      }
+
+      final title = isMilk
+          ? t('دودھ', 'Milk', 'दूध')
+          : isNaga
+              ? t('ناگا', 'No milk', 'नागा')
+              : isAdvance
+                  ? t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')
+                  : t('رقم وصول', 'Payment received', 'रकम प्राप्त');
+      lines.add('$date $time | $title | $detail | $amount');
+    }
+
+    return lines.join('\n');
+  }
+
+  void _message(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+  }
+
+  Future<void> _exportReport(
+    String action,
+    Map<String, Object?> account,
+    List<Map<String, Object?>> records,
+  ) async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final message = _reportText(account, records);
+      final number = account['account_number'] ?? 'account';
+      if (action == 'copy') {
+        await Clipboard.setData(ClipboardData(text: message));
+        _message(t('مکمل رپورٹ کاپی ہو گئی', 'Complete report copied', 'पूरी रिपोर्ट कॉपी हो गई'));
+      } else if (action == 'sms') {
+        final opened = await _export.sendSms(message);
+        _message(opened
+            ? t('SMS کے لیے رپورٹ تیار ہے', 'Report is ready in SMS', 'SMS के लिए रिपोर्ट तैयार है')
+            : t('SMS ایپ نہیں کھل سکی', 'Could not open SMS app', 'SMS ऐप नहीं खुल सकी'));
+      } else if (action == 'whatsapp') {
+        final opened = await _export.shareWhatsApp(message);
+        _message(opened
+            ? t('WhatsApp کے لیے رپورٹ تیار ہے', 'Report is ready in WhatsApp', 'WhatsApp के लिए रिपोर्ट तैयार है')
+            : t('WhatsApp نہیں کھل سکا', 'WhatsApp could not be opened', 'WhatsApp नहीं खुला'));
+      } else {
+        final pdf = await _export.createPdf(
+          title: 'Milk Account — $number — ${account['customer_name'] ?? ''}',
+          lines: message.split('\n'),
+        );
+        if (action == 'print') {
+          await _export.printPdf(pdf);
+        } else {
+          await _export.sharePdf(pdf, 'milk-account-account-$number.pdf');
+        }
+      }
+    } catch (error) {
+      _message('${t('رپورٹ تیار نہیں ہو سکی', 'Could not prepare report', 'रिपोर्ट तैयार नहीं हुई')}: $error');
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Widget _reportButton(
+    String action,
+    String label,
+    IconData icon,
+    Color color,
+    Map<String, Object?> account,
+    List<Map<String, Object?>> records,
+  ) => OutlinedButton.icon(
+        onPressed: _exporting ? null : () => _exportReport(action, account, records),
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        ),
+      );
+
+  Widget _reportActions(
+    Map<String, Object?> account,
+    List<Map<String, Object?>> records,
+  ) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 18),
+          Text(
+            t('رپورٹ شیئر کریں یا کاپی کریں', 'Share or copy report', 'रिपोर्ट साझा या कॉपी करें'),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              _reportButton('print', t('پرنٹ', 'Print', 'प्रिंट'), Icons.print, const Color(0xFF0756C9), account, records),
+              _reportButton('sms', 'SMS', Icons.sms, const Color(0xFF079B37), account, records),
+              _reportButton('whatsapp', 'WhatsApp', Icons.chat, const Color(0xFF168B45), account, records),
+              _reportButton('pdf', t('رپورٹ شیئر کریں', 'Share report', 'रिपोर्ट साझा करें'), Icons.share, const Color(0xFF7B1FA2), account, records),
+              _reportButton('copy', t('مکمل رپورٹ کاپی کریں', 'Copy complete report', 'पूरी रिपोर्ट कॉपी करें'), Icons.copy, const Color(0xFFB07A00), account, records),
+            ],
+          ),
+          if (_exporting)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: LinearProgressIndicator(),
+            ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
@@ -171,6 +349,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   Text(t('روزانہ کی مکمل تفصیل','Daily activity details','दैनिक पूरा विवरण'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   if (list.isEmpty) Padding(padding: const EdgeInsets.all(20), child: Text(t('اس دورانیے میں کوئی ریکارڈ نہیں','No records in this period','इस अवधि में कोई रिकॉर्ड नहीं'), textAlign: TextAlign.center)),
                   ...list.map(_activityCard),
+                  _reportActions(a, list),
                 ]);
               },
             ),
