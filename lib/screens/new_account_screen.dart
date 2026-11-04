@@ -201,7 +201,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    SafeArea(top: false, child: child: Scaffold(
+    child: SafeArea(top: false, child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(title: Text(_editing ? t('اکاؤنٹ میں ترمیم','Edit Account','खाता संपादित करें') : t('نیا کھاتہ','New Account','नया खाता')),
         backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
