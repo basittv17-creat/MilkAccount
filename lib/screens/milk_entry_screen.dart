@@ -3,8 +3,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/milk_entry_repository.dart';
 
 class MilkEntryScreen extends StatefulWidget {
-  const MilkEntryScreen({super.key, required this.language});
+  const MilkEntryScreen({super.key, required this.language, this.initialAccountId, this.initialDate});
   final String language;
+  final String? initialAccountId;
+  final DateTime? initialDate;
   @override
   State<MilkEntryScreen> createState() => _MilkEntryScreenState();
 }
@@ -37,9 +39,16 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
   List<Map<String, Object?>> get _pending => _filtered.where((a) => a['has_entry'] != 1).toList();
   List<Map<String, Object?>> get _received => _filtered.where((a) => a['has_entry'] == 1).toList();
 
+  bool _initialAccountApplied = false;
+
   @override
   void initState() {
     super.initState();
+    final initialDate = widget.initialDate;
+    if (initialDate != null) {
+      _date = DateTime(initialDate.year, initialDate.month, initialDate.day);
+      _recordedAt = _date;
+    }
     _loadAccounts();
     _search.addListener(() { if (mounted) setState(() {}); });
   }
@@ -57,7 +66,35 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
     setState(() => _loading = true);
     try {
       final rows = await _repo.accountsForDate(_date);
-      if (mounted) setState(() { _accounts = rows; _loading = false; });
+      if (mounted) {
+        setState(() { _accounts = rows; _loading = false; });
+        if (!_initialAccountApplied && widget.initialAccountId != null) {
+          _initialAccountApplied = true;
+          Map<String, Object?>? initialAccount;
+          for (final account in rows) {
+            if (account['id'] == widget.initialAccountId) {
+              initialAccount = account;
+              break;
+            }
+          }
+          if (initialAccount != null &&
+              initialAccount['has_entry'] != 1) {
+            _openAccount(initialAccount);
+          } else if (initialAccount != null) {
+            _message(t(
+              'اس تاریخ کا دودھ پہلے درج ہے، دوسری تاریخ منتخب کریں',
+              'Milk is already recorded for this date. Choose another date.',
+              'इस तारीख का दूध पहले दर्ज है। दूसरी तारीख चुनें।',
+            ));
+          } else {
+            _message(t(
+              'منتخب کھاتہ اس تاریخ پر دستیاب نہیں',
+              'The selected account is not available on this date',
+              'चुना खाता इस तारीख पर उपलब्ध नहीं है',
+            ));
+          }
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       rethrow;
@@ -69,7 +106,7 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
       context: context, initialDate: _date,
       firstDate: DateTime(2000), lastDate: DateTime(2100));
     if (value != null && mounted) {
-      setState(() { _date = value; _recordedAt = DateTime(value.year, value.month, value.day, _recordedAt.hour, _recordedAt.minute); _selected = null; _successMessage = null; });
+      setState(() { _date = value; _recordedAt = DateTime(value.year, value.month, value.day, _recordedAt.hour, _recordedAt.minute); _selected = null; _successMessage = null; if (widget.initialAccountId != null) _initialAccountApplied = false; });
       await _loadAccounts();
     }
   }
