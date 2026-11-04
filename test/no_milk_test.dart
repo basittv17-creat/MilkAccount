@@ -90,7 +90,6 @@ void main() {
     );
     await AppDatabase.instance.close();
   });
-}
 
   test('records a no-milk day for multiple selected accounts on the same date', () async {
     final accounts = AccountRepository();
@@ -147,3 +146,4 @@ void main() {
     expect(savedRows.map((row) => row['note']).toSet(), {'Route closed'});
     await AppDatabase.instance.close();
   });
+}
