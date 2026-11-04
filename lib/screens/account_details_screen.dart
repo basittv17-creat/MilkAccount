@@ -276,6 +276,117 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         ],
       );
 
+
+  Widget _ledgerTable(List<Map<String, Object?>> records) {
+    if (records.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          t('اس دورانیے میں کوئی ریکارڈ نہیں', 'No records in this period',
+              'इस अवधि में कोई रिकॉर्ड नहीं'),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    String sortKey(Map<String, Object?> row) {
+      if (row['activity_type'] == 'naga') {
+        return '${row['day'].toString().substring(0, 10)}T${row['recorded_time'] ?? '00:00'}';
+      }
+      return _local(row['recorded_at'])?.toIso8601String() ?? '';
+    }
+
+    final ordered = [...records]
+      ..sort((a, b) => sortKey(a).compareTo(sortKey(b)));
+    var balancePaisa = 0;
+    final rows = <DataRow>[];
+
+    for (final row in ordered) {
+      final type = row['activity_type'];
+      final isMilk = type == 'milk';
+      final isNaga = type == 'naga';
+      final isAdvance = type == 'advance';
+      final isPayment = type == 'payment';
+      final dt = isNaga ? null : _local(row['recorded_at']);
+      final day = isNaga ? DateTime.tryParse(row['day'].toString()) : dt;
+      final date = day == null ? '—' : _date(day);
+      final time = isNaga
+          ? (row['recorded_time'] ?? '00:00').toString()
+          : dt == null
+              ? '—'
+              : '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+      final amount = (row['total_paisa'] as int?) ?? 0;
+      final advanceAmount = (row['amount_paisa'] as int?) ?? 0;
+      if (isMilk) balancePaisa += amount;
+      if (isAdvance) balancePaisa += advanceAmount;
+      if (isPayment) balancePaisa -= advanceAmount;
+
+      final milkLabel = isMilk
+          ? ((row['quantity_grams'] as int) / 1000).toStringAsFixed(1)
+          : isNaga
+              ? t('ناگا', 'No milk', 'नागा')
+              : '—';
+      final rate = isMilk
+          ? (((row['rate_paisa_per_kg'] as int?) ?? 0) / 100)
+              .toStringAsFixed(2)
+          : '—';
+      final fat = isMilk ? (row['fat_value'] ?? '—').toString() : '—';
+      final milkAmount = isMilk ? _money(amount) : isNaga ? '0' : '—';
+      final advance = isAdvance ? _money(advanceAmount) : '—';
+      final received = isPayment ? _money(advanceAmount) : '—';
+
+      rows.add(DataRow(
+        color: isNaga
+            ? MaterialStateProperty.all(const Color(0xFFFFE3E3))
+            : null,
+        cells: [
+          DataCell(Text(date)),
+          DataCell(Text(time)),
+          DataCell(Text(milkLabel,
+              style: TextStyle(
+                color: isNaga ? Colors.red.shade700 : Colors.black87,
+                fontWeight: FontWeight.w800,
+              ))),
+          DataCell(Text(rate)),
+          DataCell(Text(fat)),
+          DataCell(Text(milkAmount)),
+          DataCell(Text(advance)),
+          DataCell(Text(received)),
+          DataCell(Text(_money(balancePaisa),
+              style: const TextStyle(fontWeight: FontWeight.w800))),
+        ],
+      ));
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowColor: MaterialStateProperty.all(const Color(0xFF0649AE)),
+        headingTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
+        dataTextStyle: const TextStyle(fontSize: 12, color: Colors.black87),
+        columnSpacing: 14,
+        horizontalMargin: 10,
+        columns: [
+          DataColumn(label: Text(t('تاریخ', 'Date', 'तारीख'))),
+          DataColumn(label: Text(t('وقت', 'Time', 'समय'))),
+          DataColumn(label: Text(t('دودھ کلو', 'Milk kg', 'दूध kg'))),
+          DataColumn(label: Text(t('ریٹ / کلو', 'Rate/kg', 'रेट/kg'))),
+          DataColumn(label: Text('FAT %')),
+          DataColumn(label: Text(t('دودھ قیمت', 'Milk amount', 'दूध रकम'))),
+          DataColumn(label: Text(t('ایڈوانس', 'Advance', 'एडवांस'))),
+          DataColumn(label: Text(t('وصولی', 'Received', 'प्राप्त'))),
+          DataColumn(label: Text(t('بقایا', 'Balance', 'बाकी'))),
+        ],
+        rows: rows,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
@@ -343,12 +454,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       _total(t('دودھ کی رقم','Milk total','दूध रकम'), _money(milk)),
                       _total(t('دودھ کی مقدار','Milk quantity','दूध मात्रा'), '${(grams / 1000).toStringAsFixed(3)} kg'),
                       _total(t('ایڈوانس دیا','Advance given','एडवांस दिया'), _money(advances)),
-                      _total(t('رقم وصول','Payments received','रकम मिली'), _money(received)),
-                      _total(t('باقی بیلنس','Balance','बाकी बैलेंस'), _money(balance)),
+                                            _total(t('باقی بیلنس','Balance','बाकी बैलेंस'), _money(balance)),
                     ]))),
-                  Text(t('روزانہ کی مکمل تفصیل','Daily activity details','दैनिक पूरा विवरण'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  if (list.isEmpty) Padding(padding: const EdgeInsets.all(20), child: Text(t('اس دورانیے میں کوئی ریکارڈ نہیں','No records in this period','इस अवधि में कोई रिकॉर्ड नहीं'), textAlign: TextAlign.center)),
-                  ...list.map(_activityCard),
+                  Text(t('ماہانہ دودھ اور ادائیگیوں کا مکمل حساب','Complete monthly milk and payment ledger','मासिक दूध और भुगतान का पूरा हिसाब'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  _ledgerTable(list),
                   _reportActions(a, list),
                 ]);
               },
@@ -367,31 +476,5 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     child: Row(children: [Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF52677D)))), Expanded(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w600)))]));
   Widget _total(String label, String value) => SizedBox(width: 145, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Text(label, style: const TextStyle(fontSize: 12)), const SizedBox(height: 3), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]));
-  Widget _activityCard(Map<String, Object?> row) {
-    final type = row['activity_type'];
-    final isMilk = type == 'milk', isNaga = type == 'naga', isAdvance = type == 'advance';
-    final dt = isNaga ? null : _local(row['recorded_at']);
-    final day = isNaga ? DateTime.tryParse(row['day'].toString()) : dt;
-    final date = day == null ? '—' : _date(day);
-    final time = isNaga ? (row['recorded_time'] ?? '00:00').toString()
-      : dt == null ? '' : '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    final title = isMilk ? t('دودھ','Milk','दूध') : isNaga ? t('ناگا / دودھ نہیں آیا','No milk / Naga','नागा') : isAdvance ? t('ایڈوانس دیا','Advance given','एडवांस दिया') : t('رقم وصول کی','Payment received','रकम प्राप्त');
-    String detail;
-    String amount;
-    if (isMilk) {
-      detail = '${(row['quantity_grams'] as int) / 1000} kg • FAT: ${row['fat_value'] ?? '—'} • Rate: ${_money(row['rate_paisa_per_kg'])}/kg';
-      amount = _money(row['total_paisa']);
-    } else if (isNaga) {
-      detail = (row['note']?.toString().isNotEmpty ?? false) ? row['note'].toString() : t('اس دن دودھ درج نہیں ہوا','No milk recorded that day','उस दिन दूध दर्ज नहीं हुआ');
-      amount = '—';
-    } else {
-      detail = row['note']?.toString() ?? '';
-      amount = _money(row['amount_paisa']);
-    }
-    return Card(color: Colors.white, child: ListTile(
-      leading: CircleAvatar(backgroundColor: isMilk ? const Color(0xFFDFF1FF) : isNaga ? const Color(0xFFFFE3E3) : const Color(0xFFFFF2C6),
-        child: Icon(isMilk ? Icons.water_drop : isNaga ? Icons.event_busy : isAdvance ? Icons.call_made : Icons.call_received)),
-      title: Text('$title • $date  $time', style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(detail), trailing: Text(amount, style: const TextStyle(fontWeight: FontWeight.bold))));
-  }
+
 }
