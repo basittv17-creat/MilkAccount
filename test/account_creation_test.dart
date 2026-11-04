@@ -9,6 +9,7 @@ void main() {
 
   test('new accounts persist fields and receive sequential numbers', () async {
     final repo = AccountRepository();
+    final firstPreview = await repo.nextAccountNumber();
     await repo.createAccount(customerName: 'Phase3 Ali Khan', fatherName: 'Ahmed',
       phoneNumber: '3001234567', startAt: DateTime(2026, 11, 3),
       milkRatePaisa: 15000, fatEnabled: true);
@@ -26,6 +27,8 @@ void main() {
     expect(rows[0]['fat_enabled'], 1);
     expect(rows[1]['customer_name'], 'Phase3 Sara');
     expect(rows[1]['account_number'], (rows[0]['account_number'] as int) + 1);
+    expect(rows.first['account_number'], firstPreview);
+    expect(await repo.nextAccountNumber(), firstPreview + 2);
     await AppDatabase.instance.close();
   });
 

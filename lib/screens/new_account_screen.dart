@@ -19,6 +19,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
   final _rate = TextEditingController();
   final _notes = TextEditingController();
   final _repo = AccountRepository();
+  late Future<int> _nextAccountNumber;
   DateTime _start = DateTime.now();
   bool _fat = false, _saving = false;
   String _selectedFlag = '🇵🇰';
@@ -29,6 +30,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
   @override
   void initState() {
     super.initState();
+    _nextAccountNumber = _repo.nextAccountNumber();
     final a = widget.account;
     if (a != null) {
       _name.text = a['customer_name']?.toString() ?? '';
@@ -52,6 +54,51 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
 
   InputDecoration dec(String label) => InputDecoration(labelText: label, filled: true,
     fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)));
+
+  Widget _accountNumberCard() {
+    final number = _editing
+        ? Text(
+            widget.account!['account_number'].toString().padLeft(2, '0'),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          )
+        : FutureBuilder<int>(
+            future: _nextAccountNumber,
+            builder: (context, snapshot) => Text(
+              snapshot.hasData ? snapshot.data!.toString().padLeft(2, '0') : '—',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            ),
+          );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2C6),
+        border: Border.all(color: const Color(0xFFE2B52D), width: 1.4),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              t('کھاتہ نمبر', 'Account number', 'खाता नंबर'),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 62),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2B52D)),
+            ),
+            child: Center(child: number),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget field(TextEditingController c, String label, {bool required = false, bool numeric = false, int lines = 1}) =>
     TextFormField(controller: c, maxLines: lines,
@@ -159,6 +206,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
       appBar: AppBar(title: Text(_editing ? t('اکاؤنٹ میں ترمیم','Edit Account','खाता संपादित करें') : t('نیا کھاتہ','New Account','नया खाता')),
         backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
       body: Form(key: _key, child: ListView(padding: const EdgeInsets.all(16), children: [
+        _accountNumberCard(),
         field(_name,t('گاہک کا نام','Customer name','ग्राहक का नाम'),required:true), const SizedBox(height:12),
         field(_father,t('والد کا نام','Father name','पिता का नाम')), const SizedBox(height:12),
         Text(t('فون نمبر','Phone number','फ़ोन नंबर')),

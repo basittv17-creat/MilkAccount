@@ -4,6 +4,13 @@ import '../data/id_generator.dart';
 class AccountRepository {
   AccountRepository({AppDatabase? database}) : _database = database ?? AppDatabase.instance;
   final AppDatabase _database;
+  Future<int> nextAccountNumber() async {
+    final rows = await (await _database.database).rawQuery(
+      'SELECT COALESCE(MAX(account_number), 0) + 1 AS next_number FROM accounts',
+    );
+    return (rows.single['next_number'] as int?) ?? 1;
+  }
+
   Future<List<Map<String, Object?>>> searchAccounts(String query) async {
     final db = await _database.database; final term = query.trim();
     if (term.isEmpty) return db.query('accounts', where: 'is_active = 1', orderBy: 'account_number ASC');
