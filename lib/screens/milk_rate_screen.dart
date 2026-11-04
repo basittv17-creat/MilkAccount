@@ -343,9 +343,29 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  t('اہم: مہینے کی تبدیلی صرف اسی مہینے کی محفوظ انٹریوں پر اثر کرے گی۔ دوسرے مہینوں کا حساب محفوظ رہے گا۔ آئندہ ریٹ الگ سے تبدیل کیا جا سکتا ہے۔',
-                    'Important: A monthly change affects only saved entries in that month. Other months stay unchanged. Future rates can be changed separately.',
-                    'ज़रूरी: महीने का बदलाव केवल उसी महीने की सेव एंट्री पर लागू होगा। दूसरे महीने सुरक्षित रहेंगे। आगे का रेट अलग बदला जा सकता है।'),
+                  _mode == 1
+                      ? t(
+                          'منتخب مہینے سے آگے کی محفوظ انٹریوں اور نئی انٹریوں کا ریٹ تبدیل ہوگا۔',
+                          'Saved entries from the selected month onward and new entries will use the new rate.',
+                          'चुने महीने से आगे की सेव और नई एंट्री का रेट बदलेगा।',
+                        )
+                      : _mode == 2
+                          ? _singleAccountFutureOnly
+                              ? t(
+                                  'صرف منتخب کھاتے کی آئندہ انٹریوں کا ریٹ تبدیل ہوگا۔',
+                                  'Only future entries for the selected account will use the new rate.',
+                                  'केवल चुने खाते की आगे की एंट्री का रेट बदलेगा।',
+                                )
+                              : t(
+                                  'صرف منتخب کھاتے کے منتخب مہینے کی انٹریاں تبدیل ہوں گی۔',
+                                  'Only the selected month entries for the selected account will change.',
+                                  'केवल चुने खाते के चुने महीने की एंट्री बदलेगी।',
+                                )
+                          : t(
+                              'صرف منتخب مہینے کی محفوظ انٹریاں تبدیل ہوں گی۔ دوسرے مہینوں اور آئندہ ریٹ پر اثر نہیں ہوگا۔',
+                              'Only saved entries in the selected month will change. Other months and future rates stay unchanged.',
+                              'केवल चुने महीने की सेव एंट्री बदलेगी। दूसरे महीने और आगे के रेट पर असर नहीं होगा।',
+                            ),
                   style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4),
                 ),
               ),
