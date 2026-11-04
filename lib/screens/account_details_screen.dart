@@ -130,8 +130,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       '',
       '${t('کل دودھ', 'Total milk', 'कुल दूध')}: ${(grams / 1000).toStringAsFixed(3)} kg',
       '${t('دودھ کی کل رقم', 'Milk amount', 'दूध की रकम')}: ${_money(milk)}',
-      '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
-      '${t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडوانس')}: ${_money(advances - milk)}',
+      if (advances > 0)
+        '${t('ایڈوانس دیا', 'Advance given', 'एडवांस दिया')}: ${_money(advances)}',
+      if (advances > 0)
+        '${t('باقی ایڈوانس', 'Remaining advance', 'बाकी एडوانس')}: ${_money((advances - milk).clamp(0, advances))}',
       '${t('ناگا کے دن', 'No-milk days', 'नागा दिन')}: $noMilkDays',
       '',
       t('مکمل روزانہ تفصیل', 'Complete daily details', 'पूरी दैनिक जानकारी'),
@@ -437,14 +439,17 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     case 'advance': advances += row['amount_paisa'] as int;
                   }
                 }
-                final balance = advances - milk;
+                final hasAdvance = advances > 0;
+                final remainingAdvance = (advances - milk).clamp(0, advances);
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Card(color: const Color(0xFFDFF1FF), child: Padding(padding: const EdgeInsets.all(12), child: Wrap(
                     alignment: WrapAlignment.spaceBetween, spacing: 12, runSpacing: 10, children: [
                       _total(t('دودھ کی رقم','Milk total','दूध रकम'), _money(milk)),
                       _total(t('دودھ کی مقدار','Milk quantity','दूध मात्रा'), '${(grams / 1000).toStringAsFixed(3)} kg'),
-                      _total(t('ایڈوانس دیا','Advance given','एडवांस दिया'), _money(advances)),
-                                            _total(t('باقی ایڈوانس','Remaining advance','बाकी एडوانس'), _money(balance)),
+                      if (hasAdvance)
+                        _total(t('ایڈوانس دیا','Advance given','एडवांस दिया'), _money(advances)),
+                      if (hasAdvance)
+                        _total(t('باقی ایڈوانس','Remaining advance','बाकी एडوانس'), _money(remainingAdvance)),
                     ]))),
                   Text(t('ماہانہ دودھ اور ایڈوانس کا مکمل حساب','Complete monthly milk and advance ledger','मासिक दूध और एडवांस का पूरा हिसाब'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   _ledgerTable(list),
