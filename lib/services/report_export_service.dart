@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ReportExportService {
@@ -12,20 +13,35 @@ class ReportExportService {
     required String title,
     required List<String> lines,
   }) async {
+    // The PDF package's built-in Helvetica font does not contain Urdu/Arabic
+    // glyphs. Bundle Noto Naskh Arabic so customer names render offline too.
+    final arabicFontData =
+        await rootBundle.load('assets/fonts/NotoNaskhArabic[wght].ttf');
+    final arabicFont = pw.Font.ttf(arabicFontData);
+    final textStyle = pw.TextStyle(
+      fontSize: 11,
+      fontFallback: [arabicFont],
+    );
+
     final document = pw.Document();
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(36),
         build: (context) => [
-          pw.Text(title,
-              style: pw.TextStyle(
-                  fontSize: 20, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 20,
+              fontWeight: pw.FontWeight.bold,
+              fontFallback: [arabicFont],
+            ),
+          ),
           pw.SizedBox(height: 18),
           ...lines.map(
             (line) => pw.Padding(
               padding: const pw.EdgeInsets.only(bottom: 8),
-              child: pw.Text(line, style: const pw.TextStyle(fontSize: 11)),
+              child: pw.Text(line, style: textStyle),
             ),
           ),
         ],
