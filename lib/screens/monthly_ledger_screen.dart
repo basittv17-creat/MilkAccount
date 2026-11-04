@@ -776,25 +776,61 @@ class _MonthlyLedgerScreenState extends State<MonthlyLedgerScreen> {
               const SizedBox(height: 11),
               _monthPicker(),
               const SizedBox(height: 8),
-              SizedBox(
-                height: 62,
-                child: FilledButton.icon(
-                  onPressed: () => _openMilkEntry(account),
-                  icon: const Icon(Icons.local_drink, size: 30),
-                  label: Text(
-                    t(
-                      'اس مہینے میں شامل کریں (دودھ، تاریخ، وقت، قیمت وغیرہ)',
-                      'Add milk for this month (date, time and details)',
-                      'इस महीने दूध जोड़ें (तारीख, समय और विवरण)',
+              Material(
+                color: const Color(0xFFE3F8E8),
+                borderRadius: BorderRadius.circular(15),
+                child: InkWell(
+                  onTap: () => _openMilkEntry(account),
+                  borderRadius: BorderRadius.circular(15),
+                  child: Container(
+                    height: 72,
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 9, 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFF64BC78),
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE3F8E8),
-                    foregroundColor: const Color(0xFF075A24),
-                    side: const BorderSide(color: Color(0xFF64BC78), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.local_drink,
+                          size: 42,
+                          color: Color(0xFF079B37),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            t(
+                              'اس مہینے میں شامل کریں (دودھ، تاریخ، وقت، قیمت وغیرہ)',
+                              'Add milk for this month (date, time and details)',
+                              'इस महीने दूध जोड़ें (तारीख, समय और विवरण)',
+                            ),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF075A24),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF079B37),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 32,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
