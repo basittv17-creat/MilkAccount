@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/milk_entry_repository.dart';
+import '../utils/phone_number.dart';
 
 class MilkEntryScreen extends StatefulWidget {
   const MilkEntryScreen({super.key, required this.language, this.initialAccountId, this.initialDate});
@@ -281,11 +282,14 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
           ? t('دودھ کا اندراج', 'Milk Entry', 'दूध की एंट्री')
           : t('آج کا دودھ درج کریں', 'Enter Today’s Milk', 'आज का दूध दर्ज करें')),
       ),
-      body: _loading
-        ? const Center(child: CircularProgressIndicator())
-        : _accounts.isEmpty
-          ? Center(child: Text(t('پہلے نیا کھاتہ بنائیں', 'Create an account first', 'पहले खाता बनाएँ')))
-          : _selected == null ? _listView() : _entryView(_selected!),
+      body: SafeArea(
+        top: false,
+        child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _accounts.isEmpty
+            ? Center(child: Text(t('پہلے نیا کھاتہ بنائیں', 'Create an account first', 'पहले खाता बनाएँ')))
+            : _selected == null ? _listView() : _entryView(_selected!),
+      ),
     ),
   );
 
@@ -396,8 +400,39 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${a['customer_name']}  •  ${t('کھاتہ نمبر:', 'Account:', 'खाता नंबर:')} ${a['account_number']}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-            if ((a['father_name'] as String? ?? '').isNotEmpty) Text('${t('ولد:', 'S/O:', 'पुत्र:')} ${a['father_name']}'),
-            if ((a['phone_number'] as String? ?? '').isNotEmpty) Text('${a['country_code']} ${a['phone_number']}'),
+            if ((a['father_name'] as String? ?? '').isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                textDirection: TextDirection.rtl,
+                children: [
+                  Text(t('ولد:', 'S/O:', 'पुत्र:')),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(a['father_name'] as String),
+                    ),
+                  ),
+                ],
+              ),
+            if ((a['phone_number'] as String? ?? '').isNotEmpty)
+              Builder(builder: (context) {
+                final phone = normalizeInternationalPhone(
+                  countryCode: a['country_code'] as String?,
+                  phoneNumber: a['phone_number'] as String?,
+                );
+                final country = (a['country_code'] as String? ?? '+92')
+                    .replaceAll(RegExp(r'\D'), '');
+                final displayPhone = phone == null
+                    ? (a['phone_number'] as String)
+                    : phone.startsWith(country) && country.isNotEmpty
+                        ? '+$country ${phone.substring(country.length)}'
+                        : '+$phone';
+                return Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(displayPhone),
+                );
+              }),
           ])),
         ])),
       const SizedBox(height: 12),
@@ -408,7 +443,14 @@ class _MilkEntryScreenState extends State<MilkEntryScreen> {
         child: Row(children: [const Icon(Icons.price_change, color: Color(0xFF0649AE)), const SizedBox(width: 8), Expanded(child: Text(t('دودھ کا ریٹ فی کلو', 'Milk rate per kg', 'दूध का रेट प्रति किलो'))), Text('Rs. $rate', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))])),
       const SizedBox(height: 10),
       Row(children: [
-        Expanded(child: OutlinedButton.icon(onPressed: _pickDate, icon: const Icon(Icons.calendar_month), label: Text(_dateLabel(_date)))),
+        Expanded(child: OutlinedButton.icon(
+          onPressed: _pickDate,
+          icon: const Icon(Icons.calendar_month),
+          label: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(_dateLabel(_date), maxLines: 1, softWrap: false),
+          ),
+        )),
         const SizedBox(width: 8),
         Expanded(child: OutlinedButton.icon(onPressed: _pickTime, icon: const Icon(Icons.access_time), label: Text(TimeOfDay.fromDateTime(_recordedAt).format(context)))),
       ]),
