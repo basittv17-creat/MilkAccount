@@ -134,7 +134,7 @@ void main() {
       month: DateTime(2026, 2),
     );
     expect(activities.map((row) => row['activity_type']).toList(),
-        ['milk', 'advance', 'naga']);
+        ['milk', 'advance', 'advance', 'naga']);
     expect(activities.last['note'], 'Customer away');
 
     await ledger.updateFatEnabled(accountId: id, enabled: false);

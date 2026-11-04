@@ -157,7 +157,7 @@ class SettingsScreen extends StatelessWidget {
     final rtl = language == 'ur';
     return Directionality(
       textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
+      SafeArea(top: false, child: child: Scaffold(
         backgroundColor: const Color(0xFFF3F9FF),
         appBar: AppBar(
           title: Text(_text('title')),
@@ -259,7 +259,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }

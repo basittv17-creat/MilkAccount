@@ -201,7 +201,7 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    child: Scaffold(
+    SafeArea(top: false, child: child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(title: Text(_editing ? t('اکاؤنٹ میں ترمیم','Edit Account','खाता संपादित करें') : t('نیا کھاتہ','New Account','नया खाता')),
         backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
@@ -233,5 +233,5 @@ class _NewAccountScreenState extends State<NewAccountScreen> {
             _editing?t('تبدیلیاں محفوظ کریں','Save Changes','बदलाव सेव करें'):t('کھاتہ محفوظ کریں','Save Account','खाता सेव करें')),
           style:FilledButton.styleFrom(backgroundColor:const Color(0xFF079B37),foregroundColor:Colors.white))),
       ])),
-    ));
+    )));
 }

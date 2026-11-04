@@ -381,7 +381,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    child: Scaffold(
+    SafeArea(top: false, child: child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(title: Text(t('اکاؤنٹ کی مکمل تفصیل','Complete Account Ledger','खाते का पूरा विवरण')),
         backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
@@ -455,7 +455,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           ]);
         },
       ),
-    ),
+    )),
   );
 
   Widget _choice(_ActivityRange value, String label) => ChoiceChip(

@@ -118,7 +118,7 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) SafeArea(top: false, child: => Scaffold(
         appBar: AppBar(title: Text(_text('title'))),
         body: ListView(
           padding: const EdgeInsets.all(18),
@@ -158,5 +158,5 @@ class _BackupScreenState extends State<BackupScreen> {
             ),
           ],
         ),
-      );
+      ));
 }

@@ -363,7 +363,7 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    child: Scaffold(
+    SafeArea(top: false, child: child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(
         leading: IconButton(
@@ -843,7 +843,7 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
           );
         },
       ),
-    ),
+    )),
   );
 
   Widget _sectionTitle(String value) => Padding(

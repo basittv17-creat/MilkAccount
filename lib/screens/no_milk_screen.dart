@@ -522,7 +522,7 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
         textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-        child: Scaffold(
+        SafeArea(top: false, child: child: Scaffold(
           backgroundColor: const Color(0xFFF3F9FF),
           appBar: AppBar(
             title: Text(t('دودھ نہ آنے کا دن (ناگا)', 'No-Milk Day (Naga)',
@@ -549,6 +549,6 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
               return _showDetails ? _detailsView() : _selectionView();
             },
           ),
-        ),
+        )),
       );
 }

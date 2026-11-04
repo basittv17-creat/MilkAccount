@@ -56,7 +56,7 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: _ur ? TextDirection.rtl : TextDirection.ltr,
-    child: Scaffold(
+    SafeArea(top: false, child: child: Scaffold(
       backgroundColor: const Color(0xFFF3F9FF),
       appBar: AppBar(title: Text(t('ایڈوانس', 'Advance', 'एडवांस')), backgroundColor: const Color(0xFF0649AE), foregroundColor: Colors.white),
       body: FutureBuilder<List<Map<String, Object?>>>(
@@ -70,7 +70,7 @@ class _AdvanceScreenState extends State<AdvanceScreen> {
           return _content();
         },
       ),
-    ),
+    )),
   );
 
   Widget _content() => FutureBuilder<int>(
