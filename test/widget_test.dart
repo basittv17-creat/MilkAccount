@@ -49,7 +49,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('दूध की एंट्री'), findsOneWidget);
-    expect(find.text('एडوان्स'), findsOneWidget);
+    expect(find.text('एडवांस'), findsOneWidget);
     expect(find.text('खाते'), findsNWidgets(2));
   });
 }
