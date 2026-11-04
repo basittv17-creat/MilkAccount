@@ -47,9 +47,8 @@ class ReportExportService {
     summarySheet.appendRow([TextCellValue('Metric'), TextCellValue('Value')]);
     final metrics = <(String, int)>[
       ('Milk amount (Rs.)', summary['milk_amount_paisa'] ?? 0),
-      ('Remaining advance (Rs.)', summary['balance_paisa'] ?? 0),
+      ('Balance (Rs.)', summary['balance_paisa'] ?? 0),
       ('Advance given (Rs.)', summary['advance_given_paisa'] ?? 0),
-      ('Payments received (Rs.)', summary['payment_received_paisa'] ?? 0),
       ('Milk quantity (kg)', summary['milk_quantity_grams'] ?? 0),
       ('Milk entries', summary['milk_entries'] ?? 0),
       ('No-milk days', summary['no_milk_days'] ?? 0),
