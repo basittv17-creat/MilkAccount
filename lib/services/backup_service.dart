@@ -86,7 +86,8 @@ class BackupService {
       }
 
       final databasePath = await _database.getDatabasePath();
-      final safetyCopyPath = '$databasePath.before-restore-backup';
+      final safetyCopyPath = '$databasePath.before-restore-' +
+          DateTime.now().microsecondsSinceEpoch.toString() + '.db';
       await _database.close();
       try {
         final current = File(databasePath);
