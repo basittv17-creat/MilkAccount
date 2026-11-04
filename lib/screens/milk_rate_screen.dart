@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/milk_rate_repository.dart';
+import '../utils/phone_number.dart';
 
 class MilkRateScreen extends StatefulWidget {
   const MilkRateScreen({super.key, required this.language});
@@ -14,7 +16,10 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
   late Future<List<Map<String, Object?>>> _accounts;
   final Set<String> _selectedIds = {};
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
-  bool _futureOnly = false;
+  int _mode = 0; // 0: selected month, 1: from month onward, 2: one account.
+  bool _singleAccountFutureOnly = false;
+  bool _sendSms = false;
+  bool _sendWhatsApp = false;
   bool _saving = false;
   bool get _ur => widget.language == 'ur';
   String t(String u, String e, String h) =>
@@ -51,44 +56,260 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
     });
   }
 
-  Future<void> _save() async {
+
+  void _changeMode(int mode) {
+    setState(() {
+      _mode = mode;
+      _selectedIds.clear();
+      if (mode != 2) _singleAccountFutureOnly = false;
+    });
+  }
+
+  void _selectAccount(String id, bool selected) {
+    setState(() {
+      if (_mode == 2) {
+        _selectedIds..clear()..add(id);
+      } else if (selected) {
+        _selectedIds.add(id);
+      } else {
+        _selectedIds.remove(id);
+      }
+    });
+  }
+
+  void _adjustRate(double step) {
+    final current = double.tryParse(_rate.text.trim()) ?? 0;
+    final next = (current + step).clamp(0, 1000000).toDouble();
+    _rate.text = next.toStringAsFixed(2);
+    setState(() {});
+  }
+
+  Future<void> _save(List<Map<String, Object?>> accounts) async {
     final amount = double.tryParse(_rate.text.trim());
-    if (_selectedIds.isEmpty || amount == null || !amount.isFinite || amount < 0 || amount > 1000000) {
-      _message(t('کھاتے منتخب کریں اور درست ریٹ درج کریں', 'Select accounts and enter a valid rate', 'खाते चुनें और सही रेट दर्ज करें'));
+    final validSelection = _mode == 2
+        ? _selectedIds.length == 1
+        : _selectedIds.isNotEmpty;
+    if (!validSelection || amount == null || !amount.isFinite ||
+        amount < 0 || amount > 1000000) {
+      _message(t('کھاتہ منتخب کریں اور درست ریٹ درج کریں',
+          'Select the required account(s) and enter a valid rate',
+          'खाते चुनें और सही रेट दर्ज करें'));
       return;
     }
+
+    final selectedAccounts = accounts
+        .where((account) => _selectedIds.contains(account['id']))
+        .toList();
+    if (selectedAccounts.length != _selectedIds.length) {
+      _message(t('منتخب کھاتے نہیں ملے', 'Selected accounts could not be found',
+          'चुने खाते नहीं मिले'));
+      return;
+    }
+
+    final singleFuture = _mode == 2 && _singleAccountFutureOnly;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t('ریٹ تبدیل کرنے کی تصدیق', 'Confirm milk rate change', 'दूध रेट बदलने की पुष्टि')),
-        content: Text(_futureOnly
-          ? t('نیا ریٹ منتخب کھاتوں کی آئندہ نئی انٹریوں پر لاگو ہوگا۔ پرانی انٹریاں تبدیل نہیں ہوں گی۔',
-              'The new rate will apply to future entries for selected accounts. Existing entries will not change.',
-              'नया रेट चुने गए खातों की आगे की एंट्री पर लागू होगा। पुरानी एंट्री नहीं बदलेगी।')
-          : t('صرف ${_monthLabel()} کی منتخب کھاتوں والی موجودہ دودھ انٹریاں تبدیل ہوں گی۔ دوسرے مہینوں اور آئندہ ریٹ پر کوئی اثر نہیں ہوگا۔',
-              'Only existing milk entries for selected accounts in ${_monthLabel()} will change. Other months and future account rates will remain untouched.',
-              'केवल ${_monthLabel()} की चुने गए खातों वाली मौजूदा दूध एंट्री बदलेगी। दूसरे महीने और आगे का रेट नहीं बदलेगा।')),
+        title: Text(t('ریٹ تبدیل کرنے کی تصدیق',
+            'Confirm milk rate change', 'दूध रेट बदलने की पुष्टि')),
+        content: Text(_mode == 1
+            ? t(
+                '${_monthLabel()} سے منتخب کھاتوں کی محفوظ اور آئندہ انٹریوں پر نیا ریٹ لگے گا۔',
+                'The new rate will apply to saved entries from ${_monthLabel()} onward and to future entries for selected accounts.',
+                '${_monthLabel()} से चुने खातों की सेव और आगे की एंट्री पर नया रेट लगेगा।')
+            : singleFuture
+                ? t(
+                    'صرف منتخب کھاتے کی آئندہ انٹریوں کا ریٹ تبدیل ہوگا۔ محفوظ پرانی انٹریاں نہیں بدلیں گی۔',
+                    'Only future entries for the selected account will use this rate. Saved entries will not change.',
+                    'केवल चुने खाते की आगे की एंट्री का रेट बदलेगा। पुरानी सेव एंट्री नहीं बदलेगी।')
+                : t(
+                    'صرف ${_monthLabel()} کی منتخب کھاتوں والی محفوظ انٹریاں تبدیل ہوں گی۔',
+                    'Only saved entries in ${_monthLabel()} for the selected account(s) will change.',
+                    'केवल ${_monthLabel()} की चुने खातों वाली सेव एंट्री बदलेगी।')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('منسوخ', 'Cancel', 'रद्द करें'))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('تبدیلی کریں', 'Apply change', 'बदलाव करें'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+              child: Text(t('منسوخ', 'Cancel', 'रद्द करें'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+              child: Text(t('تبدیلی کریں', 'Apply change', 'बदलाव करें'))),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
+
     setState(() => _saving = true);
     try {
       final paisa = (amount * 100).round();
-      final changed = _futureOnly
-        ? await _repo.updateFutureRate(accountIds: _selectedIds.toList(), ratePaisaPerKg: paisa)
-        : await _repo.updateMonthEntries(accountIds: _selectedIds.toList(), month: _month, ratePaisaPerKg: paisa);
+      final int changed;
+      if (_mode == 1) {
+        changed = await _repo.updateFromMonth(
+          accountIds: _selectedIds.toList(),
+          month: _month,
+          ratePaisaPerKg: paisa,
+        );
+      } else if (singleFuture) {
+        changed = await _repo.updateFutureRate(
+          accountIds: _selectedIds.toList(),
+          ratePaisaPerKg: paisa,
+        );
+      } else {
+        changed = await _repo.updateMonthEntries(
+          accountIds: _selectedIds.toList(),
+          month: _month,
+          ratePaisaPerKg: paisa,
+        );
+      }
+
       if (!mounted) return;
-      setState(() { _selectedIds.clear(); _rate.clear(); _load(); });
-      _message(_futureOnly
-        ? t('آئندہ انٹریوں کا ریٹ محفوظ ہوگیا۔', 'Future rate saved.', 'आगे की एंट्री का रेट सेव हो गया।')
-        : t('منتخب مہینے کی $changed انٹریاں تبدیل ہوگئیں۔', '$changed entries in the selected month were updated.', 'चुने गए महीने की $changed एंट्री बदल गईं।'));
+      await _showSuccess(
+        accounts: selectedAccounts,
+        rate: _money(paisa),
+        changedEntries: changed,
+      );
+      if (mounted && (_sendSms || _sendWhatsApp)) {
+        await _sendNotifications(selectedAccounts, _money(paisa));
+      }
+      if (mounted) {
+        setState(() {
+          _selectedIds.clear();
+          _rate.clear();
+          _sendSms = false;
+          _sendWhatsApp = false;
+          _load();
+        });
+      }
     } catch (error) {
-      if (mounted) _message('${t('ریٹ محفوظ نہیں ہو سکا', 'Could not save rate', 'रेट सेव नहीं हो सका')}: $error');
-    } finally { if (mounted) setState(() => _saving = false); }
+      if (mounted) {
+        _message('${t('ریٹ محفوظ نہیں ہو سکا', 'Could not save rate',
+            'रेट सेव नहीं हो सका')}: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _showSuccess({
+    required List<Map<String, Object?>> accounts,
+    required String rate,
+    required int changedEntries,
+  }) async {
+    final period = _mode == 1
+        ? t('منتخب مہینے سے آئندہ', 'From selected month onward',
+            'चुने महीने से आगे')
+        : _mode == 2 && _singleAccountFutureOnly
+            ? t('آئندہ انٹریاں', 'Future entries', 'आगे की एंट्री')
+            : _monthLabel();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF08A832), size: 76),
+            const SizedBox(height: 12),
+            Text(
+              t('دودھ کی قیمت کامیابی سے تبدیل کر دی گئی!',
+                  'Milk rate changed successfully!',
+                  'दूध का रेट सफलतापूर्वक बदल गया!'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            _successLine(t('مہینہ / مدت', 'Month / period', 'महीना / अवधि'), period),
+            _successLine(t('تبدیل شدہ کھاتے', 'Accounts changed', 'बदले खाते'),
+                '${accounts.length}'),
+            _successLine(t('نیا ریٹ فی کلو', 'New rate per kg', 'नया रेट प्रति किलो'),
+                rate),
+            if (_mode != 2 || !_singleAccountFutureOnly)
+              _successLine(t('تبدیل شدہ انٹریاں', 'Entries updated', 'बदली एंट्री'),
+                  '$changedEntries'),
+            if (accounts.length == 1)
+              _successLine(t('کھاتہ', 'Account', 'खाता'),
+                  '#${accounts.first['account_number']} — ${accounts.first['customer_name']}'),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx),
+            icon: const Icon(Icons.check),
+            label: Text(t('ٹھیک ہے', 'OK', 'ठीक है')),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF08A832),
+                foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _successLine(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [
+          Expanded(child: Text(label,
+              style: const TextStyle(color: Colors.blueGrey))),
+          const SizedBox(width: 8),
+          Flexible(child: Text(value, textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w800))),
+        ]),
+      );
+
+  Future<void> _sendNotifications(
+    List<Map<String, Object?>> accounts,
+    String rate,
+  ) async {
+    final errors = <String>[];
+    for (final account in accounts) {
+      final phone = normalizeInternationalPhone(
+        countryCode: account['country_code']?.toString(),
+        phoneNumber: account['phone_number']?.toString(),
+      );
+      final name = account['customer_name']?.toString() ?? '';
+      if (phone == null) {
+        errors.add('$name: ${t('درست فون نمبر موجود نہیں',
+            'No valid phone number', 'सही फोन नंबर नहीं है')}');
+        continue;
+      }
+      final period = _mode == 2 && _singleAccountFutureOnly
+          ? t('آئندہ انٹریاں', 'future entries', 'आगे की एंट्री')
+          : _monthLabel();
+      final message = t(
+        'محترم $name، دودھ کا نیا ریٹ $rate فی کلو ہے۔ مؤثر مدت: $period۔',
+        'Dear $name, the new milk rate is $rate per kg. Effective period: $period.',
+        'प्रिय $name, दूध का नया रेट $rate प्रति किलो है। प्रभावी अवधि: $period।',
+      );
+      if (_sendSms) {
+        try {
+          final uri = Uri(
+            scheme: 'sms',
+            path: '+$phone',
+            queryParameters: {'body': message},
+          );
+          if (!await launchUrl(uri)) {
+            errors.add('$name: SMS ${t('نہیں کھل سکا', 'could not open', 'नहीं खुला')}');
+          }
+        } catch (error) {
+          errors.add('$name: SMS $error');
+        }
+      }
+      if (_sendWhatsApp) {
+        try {
+          final uri = Uri.https('wa.me', '/$phone', {'text': message});
+          if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+            errors.add('$name: WhatsApp ${t('نہیں کھل سکا', 'could not open', 'नहीं खुला')}');
+          }
+        } catch (error) {
+          errors.add('$name: WhatsApp $error');
+        }
+        if (accounts.length > 1) {
+          await Future<void>.delayed(const Duration(milliseconds: 1200));
+        }
+      }
+    }
+    if (errors.isNotEmpty && mounted) {
+      _message(errors.take(3).join('\n'));
+    }
   }
 
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
@@ -129,77 +350,189 @@ class _MilkRateScreenState extends State<MilkRateScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              _sectionTitle(t('ریٹ تبدیل کرنے کا طریقہ', 'Choose what to change', 'क्या बदलना है चुनें')),
-              RadioListTile<bool>(
-                value: false, groupValue: _futureOnly,
-                onChanged: _saving ? null : (v) => setState(() => _futureOnly = v!),
-                title: Text(t('منتخب مہینے کا حساب تبدیل کریں', 'Change selected month entries', 'चुने महीने की एंट्री बदलें')),
-                subtitle: Text(t('صرف اسی مہینے کی پرانی انٹریاں تبدیل ہوں گی', 'Only existing entries in that month are recalculated', 'केवल उसी महीने की पुरानी एंट्री बदलेगी')),
-                activeColor: const Color(0xFF079B37), contentPadding: EdgeInsets.zero,
+
+              _sectionTitle(t('ریٹ تبدیل کرنے کا طریقہ منتخب کریں',
+                  'Choose rate change method', 'रेट बदलने का तरीका चुनें')),
+              RadioListTile<int>(
+                value: 0, groupValue: _mode,
+                onChanged: _saving ? null : (value) => _changeMode(value!),
+                title: Text(t('منتخب مہینے کا ریٹ تبدیل کریں',
+                    'Change rate for a selected month', 'चुने महीने का रेट बदलें')),
+                subtitle: Text(t('صرف منتخب مہینے کی محفوظ انٹریاں',
+                    'Only saved entries in that month', 'केवल उस महीने की सेव एंट्री')),
+                contentPadding: EdgeInsets.zero,
               ),
-              RadioListTile<bool>(
-                value: true, groupValue: _futureOnly,
-                onChanged: _saving ? null : (v) => setState(() => _futureOnly = v!),
-                title: Text(t('آئندہ دودھ کا ریٹ تبدیل کریں', 'Change rate for future entries', 'आगे की एंट्री का रेट बदलें')),
-                subtitle: Text(t('پہلے سے محفوظ انٹریاں تبدیل نہیں ہوں گی', 'Previously saved entries remain unchanged', 'पहले से सेव एंट्री नहीं बदलेगी')),
-                activeColor: const Color(0xFF079B37), contentPadding: EdgeInsets.zero,
+              RadioListTile<int>(
+                value: 1, groupValue: _mode,
+                onChanged: _saving ? null : (value) => _changeMode(value!),
+                title: Text(t('منتخب مہینے سے آئندہ ریٹ تبدیل کریں',
+                    'Change rate from a selected month onward',
+                    'चुने महीने से आगे का रेट बदलें')),
+                subtitle: Text(t('منتخب مہینے سے تمام اگلے مہینوں اور نئی انٹریوں تک',
+                    'Saved entries from that month onward and future entries',
+                    'उस महीने से आगे की सेव और नई एंट्री')),
+                contentPadding: EdgeInsets.zero,
               ),
-              if (!_futureOnly) ...[
+              RadioListTile<int>(
+                value: 2, groupValue: _mode,
+                onChanged: _saving ? null : (value) => _changeMode(value!),
+                title: Text(t('کسی خاص کھاتے کا ریٹ تبدیل کریں',
+                    'Change one specific account rate', 'किसी खास खाते का रेट बदलें')),
+                subtitle: Text(t('صرف ایک کھاتہ منتخب کریں',
+                    'Select one account only', 'केवल एक खाता चुनें')),
+                contentPadding: EdgeInsets.zero,
+              ),
+              if (_mode == 2) ...[
+                const Divider(height: 18),
+                _sectionTitle(t('اس کھاتے کے ریٹ کا اطلاق',
+                    'Apply this account rate to', 'इस खाते का रेट लागू करें')),
+                RadioListTile<bool>(
+                  value: false, groupValue: _singleAccountFutureOnly,
+                  onChanged: _saving ? null : (value) =>
+                      setState(() => _singleAccountFutureOnly = value!),
+                  title: Text(t('منتخب مہینے کی انٹریاں',
+                      'Selected month entries', 'चुने महीने की एंट्री')),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                RadioListTile<bool>(
+                  value: true, groupValue: _singleAccountFutureOnly,
+                  onChanged: _saving ? null : (value) =>
+                      setState(() => _singleAccountFutureOnly = value!),
+                  title: Text(t('آئندہ انٹریاں',
+                      'Future entries', 'आगे की एंट्री')),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+              if (_mode != 2 || !_singleAccountFutureOnly) ...[
                 const SizedBox(height: 8),
                 _sectionTitle(t('مہینہ منتخب کریں', 'Select month', 'महीना चुनें')),
                 OutlinedButton.icon(
                   onPressed: _saving ? null : _pickMonth,
                   icon: const Icon(Icons.calendar_month),
-                  label: Text(_monthLabel(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.white),
+                  label: Text(_monthLabel(),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: Colors.white,
+                  ),
                 ),
               ],
-              const SizedBox(height: 14),
               Row(children: [
                 Expanded(child: _sectionTitle(t('کھاتے منتخب کریں', 'Select accounts', 'खाते चुनें'))),
-                TextButton(
-                  onPressed: _saving ? null : () => _toggleAll(accounts, !allSelected),
-                  child: Text(allSelected ? t('سب ختم کریں', 'Clear all', 'सब हटाएँ') : t('سب منتخب کریں', 'Select all', 'सब चुनें')),
-                ),
+                if (_mode != 2)
+                  TextButton(
+                    onPressed: _saving ? null : () => _toggleAll(accounts, !allSelected),
+                    child: Text(allSelected ? t('سب ختم کریں', 'Clear all', 'सब हटाएँ') : t('تمام کھاتے منتخب کریں', 'Select all', 'सभी खाते चुनें')),
+                  ),
               ]),
+
               for (final account in accounts)
                 Card(
-                  color: _selectedIds.contains(account['id']) ? const Color(0xFFE3F8E9) : Colors.white,
+                  color: _selectedIds.contains(account['id'])
+                      ? const Color(0xFFE3F8E9)
+                      : Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
-                    side: BorderSide(color: _selectedIds.contains(account['id']) ? const Color(0xFF079B37) : const Color(0xFFD5E8F8)),
-                  ),
-                  child: CheckboxListTile(
-                    value: _selectedIds.contains(account['id']),
-                    onChanged: _saving ? null : (v) => setState(() {
-                      final id = account['id'] as String;
-                      if (v == true) { _selectedIds.add(id); } else { _selectedIds.remove(id); }
-                    }),
-                    activeColor: const Color(0xFF079B37),
-                    secondary: CircleAvatar(
-                      backgroundColor: const Color(0xFFDFF1FF),
-                      child: Text(account['account_number'].toString(), style: const TextStyle(color: Color(0xFF0649AE), fontWeight: FontWeight.bold)),
+                    side: BorderSide(
+                      color: _selectedIds.contains(account['id'])
+                          ? const Color(0xFF079B37)
+                          : const Color(0xFFD5E8F8),
                     ),
-                    title: Text(account['customer_name'].toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(t('موجودہ آئندہ ریٹ: ', 'Current future rate: ', 'मौजूदा आगे का रेट: ') + _money(account['milk_rate_paisa'])),
-                    controlAffinity: ListTileControlAffinity.trailing,
                   ),
+                  child: _mode == 2
+                      ? RadioListTile<String>(
+                          value: account['id'] as String,
+                          groupValue: _selectedIds.isEmpty
+                              ? null
+                              : _selectedIds.first,
+                          onChanged: _saving
+                              ? null
+                              : (value) => _selectAccount(value!, true),
+                          activeColor: const Color(0xFF079B37),
+                          secondary: CircleAvatar(
+                            backgroundColor: const Color(0xFFDFF1FF),
+                            child: Text(account['account_number'].toString(),
+                                style: const TextStyle(
+                                    color: Color(0xFF0649AE),
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(account['customer_name'].toString(),
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(t('موجودہ ریٹ: ', 'Current rate: ',
+                                  'मौजूदा रेट: ') +
+                              _money(account['milk_rate_paisa'])),
+                        )
+                      : CheckboxListTile(
+                          value: _selectedIds.contains(account['id']),
+                          onChanged: _saving
+                              ? null
+                              : (value) => _selectAccount(
+                                  account['id'] as String, value == true),
+                          activeColor: const Color(0xFF079B37),
+                          secondary: CircleAvatar(
+                            backgroundColor: const Color(0xFFDFF1FF),
+                            child: Text(account['account_number'].toString(),
+                                style: const TextStyle(
+                                    color: Color(0xFF0649AE),
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(account['customer_name'].toString(),
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(t('موجودہ ریٹ: ', 'Current rate: ',
+                                  'मौजूदा रेट: ') +
+                              _money(account['milk_rate_paisa'])),
+                          controlAffinity: ListTileControlAffinity.trailing,
+                        ),
                 ),
               const SizedBox(height: 12),
               _sectionTitle(t('نیا دودھ کا ریٹ فی کلو', 'New milk rate per kg', 'दूध का नया रेट प्रति किलो')),
-              TextField(
-                controller: _rate, enabled: !_saving,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  prefixText: 'Rs. ', hintText: '250.00', filled: true, fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+              Row(children: [
+                IconButton.filledTonal(
+                  onPressed: _saving ? null : () => _adjustRate(-1),
+                  icon: const Icon(Icons.remove),
                 ),
+                Expanded(
+                  child: TextField(
+                    controller: _rate, enabled: !_saving,
+                    textAlign: TextAlign.center,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      prefixText: 'Rs. ', hintText: '270.00',
+                      filled: true, fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+                    ),
+                  ),
+                ),
+                IconButton.filledTonal(
+                  onPressed: _saving ? null : () => _adjustRate(1),
+                  icon: const Icon(Icons.add),
+                ),
+              ]),
+
+              CheckboxListTile(
+                value: _sendSms,
+                onChanged: _saving ? null : (value) =>
+                    setState(() => _sendSms = value ?? false),
+                activeColor: const Color(0xFF079B37),
+                secondary: const Icon(Icons.sms, color: Color(0xFF0756C9)),
+                title: Text(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें')),
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                value: _sendWhatsApp,
+                onChanged: _saving ? null : (value) =>
+                    setState(() => _sendWhatsApp = value ?? false),
+                activeColor: const Color(0xFF079B37),
+                secondary: const Icon(Icons.chat, color: Color(0xFF168B45)),
+                title: const Text('WhatsApp'),
+                contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 18),
               SizedBox(
                 height: 54,
                 child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
+                  onPressed: _saving ? null : () => _save(accounts),
                   icon: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle),
                   label: Text(_saving ? t('محفوظ ہو رہا ہے', 'Saving...', 'सेव हो रहा है') : t('منتخب ریٹ محفوظ کریں', 'Apply selected rate', 'चुना हुआ रेट लागू करें')),
                   style: FilledButton.styleFrom(
