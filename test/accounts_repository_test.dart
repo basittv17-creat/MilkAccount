@@ -23,7 +23,7 @@ void main() {
     await db.insert('accounts', {
       'id': 'test-account-1',
       'account_number': accountNumber,
-      'customer_name': 'Ali Khan',
+      'customer_name': 'MilkAccountSearchFixture20261104QXZ',
       'father_name': 'Ahmed Khan',
       'country_code': '+92',
       'phone_number': '3001234567',
@@ -35,7 +35,7 @@ void main() {
     });
 
     final repository = AccountRepository();
-    expect((await repository.searchAccounts('Ali')).length, 1);
+    expect((await repository.searchAccounts('MilkAccountSearchFixture20261104QXZ')).length, 1);
     expect((await repository.searchAccounts(accountNumber.toString())).length, 1);
     expect((await repository.searchAccounts('Zain')).isEmpty, isTrue);
     await AppDatabase.instance.close();
