@@ -60,9 +60,17 @@ void main() {
       home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
     ));
 
+    // The account page is a lazy ListView. The monthly summary sits below
+    // the customer card and period controls, so it is not built until the test
+    // scrolls to that section. Scroll first to mount its FutureBuilder.
+    final listView = find.byType(ListView).first;
+    for (var attempt = 0; attempt < 10; attempt++) {
+      await tester.drag(listView, const Offset(0, -500));
+      await tester.pump();
+    }
+
     // sqflite_common_ffi performs real asynchronous work outside the widget
-    // test's fake-async clock. Poll the actual ledger heading instead of
-    // relying on a fixed delay that can expire before both queries finish.
+    // test's fake-async clock. Poll after the summary section has been built.
     final ledgerHeading = find.text('ماہانہ دودھ اور ایڈوانس کا مکمل حساب');
     for (var attempt = 0; attempt < 50; attempt++) {
       await tester.runAsync(() async {
@@ -71,6 +79,7 @@ void main() {
       await tester.pump();
       if (ledgerHeading.evaluate().isNotEmpty) return;
     }
+    throw TestFailure('Account ledger summary did not render after scrolling.');
   }
 
   testWidgets('does not show advance summary when customer received no advance',
