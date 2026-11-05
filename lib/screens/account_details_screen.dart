@@ -403,7 +403,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFE3E7F0),
         appBar: AppBar(
-          title: Text(t('اکاؤنٹ کی مکمل تفصیل', 'Complete Account Ledger', 'खाते का पूरा विवरण')),
+          title: Text(
+            t('اکاؤنٹ کی مکمل تفصیل', 'Complete Account Ledger', 'खाते का पूरा विवरण'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
           backgroundColor: const Color(0xFF0649AE),
           foregroundColor: Colors.white,
         ),
@@ -600,13 +605,46 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     ),
   );
 
-  Widget _detailRow(String label, Widget value) => Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Expanded(flex: 5, child: Text(label, style: const TextStyle(fontSize: 18, color: Color(0xFF333B4C), height: 1.5))),
-      const SizedBox(width: 8),
-      Expanded(flex: 6, child: Align(alignment: Alignment.centerLeft, child: value)),
-    ],
+  Widget _detailRow(String label, Widget value) => LayoutBuilder(
+    builder: (context, constraints) {
+      final labelWidget = Text(
+        label,
+        style: const TextStyle(
+          fontSize: 18,
+          color: Color(0xFF333B4C),
+          height: 1.5,
+        ),
+      );
+      final valueWidget = Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+          child: value,
+        ),
+      );
+
+      // On narrow phones, put the value below its label. The previous fixed
+      // 5:6 horizontal row forced phone numbers and rate cards beyond the card.
+      if (constraints.maxWidth < 400) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            labelWidget,
+            const SizedBox(height: 6),
+            valueWidget,
+          ],
+        );
+      }
+
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(flex: 5, child: labelWidget),
+          const SizedBox(width: 8),
+          Expanded(flex: 6, child: valueWidget),
+        ],
+      );
+    },
   );
 
   Widget _softButton({required VoidCallback onPressed, required Widget child, double radius = 18}) => Material(
