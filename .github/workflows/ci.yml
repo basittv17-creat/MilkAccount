@@ -71,6 +71,15 @@ jobs:
           : > artifacts/fatal-logs.txt
           zip -j -q artifacts/fatal-crash-logs.zip artifacts/fatal-logs.txt
           rm artifacts/fatal-logs.txt
+      # GitHub-hosted Linux runners expose KVM, but the runner user needs
+      # the udev rule before android-emulator-runner can detect hardware acceleration.
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - name: Install APK and check startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
