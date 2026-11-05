@@ -45,6 +45,38 @@ jobs:
         run: flutter test
       - name: Build Android APK
         run: flutter build apk --release
+      - name: Install APK and check startup on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: |
+            set -e
+            mkdir -p artifacts
+            trap 'adb logcat -d -v threadtime > artifacts/emulator-logcat.txt 2>&1 || true' EXIT
+            adb logcat -c
+            adb install -r build/app/outputs/flutter-apk/app-release.apk
+            adb shell monkey -p com.awasigogera.milkaccount -c android.intent.category.LAUNCHER 1
+            sleep 30
+            adb logcat -d -v threadtime > artifacts/emulator-logcat.txt
+            if grep -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' artifacts/emulator-logcat.txt; then
+              echo "App crash or ANR detected in Android emulator." >&2
+              exit 1
+            fi
+            if ! adb shell pidof com.awasigogera.milkaccount >/dev/null; then
+              echo "App process is not running after startup; see emulator-logcat.txt." >&2
+              exit 1
+            fi
+      - name: Upload emulator crash diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: milk-account-emulator-crash-logs
+          path: artifacts/emulator-logcat.txt
+          if-no-files-found: warn
       - name: Build Web
         run: flutter build web --release
       - name: Upload Android APK
