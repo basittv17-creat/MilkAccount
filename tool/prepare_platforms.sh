@@ -49,8 +49,18 @@ else
   exit 1
 fi
 
+# Fail early if the generated Android configuration does not use the official
+# application ID in both the namespace and installed APK metadata.
+EXPECTED_APP_ID="com.awasigogera.milkaccount"
+if [[ ! -f "$APP_GRADLE" ]] ||
+   ! grep -qE "namespace[[:space:]]*=[[:space:]]*\\"$EXPECTED_APP_ID\\" " "$APP_GRADLE" ||
+   ! grep -qE "applicationId[[:space:]]*=[[:space:]]*\\"$EXPECTED_APP_ID\\" " "$APP_GRADLE"; then
+  echo "Android namespace and applicationId must both be $EXPECTED_APP_ID." >&2
+  exit 1
+fi
+
 # Fail early if the generated application Gradle file did not receive API 36.
-if [[ ! -f "$APP_GRADLE" ]] || ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
+if ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
   echo "Android app compileSdk must be 36; generated configuration is not correct." >&2
   exit 1
 fi
