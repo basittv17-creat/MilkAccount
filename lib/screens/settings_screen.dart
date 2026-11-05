@@ -246,7 +246,7 @@ class SettingsScreen extends StatelessWidget {
                   applicationName: 'Milk Account',
                   applicationVersion: '0.3.0',
                   applicationIcon: const Icon(Icons.local_drink_rounded, size: 42, color: Color(0xFF0756C9)),
-                  applicationLegalese: _text('aboutBody'),
+                  applicationLegalese: '${_text('aboutBody')}\nPackage ID: com.awasigogera.milkaccount',
                 ),
               ),
             ]),
