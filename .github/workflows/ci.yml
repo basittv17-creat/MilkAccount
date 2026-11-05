@@ -48,6 +48,8 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Test
         run: flutter test
+      - name: Simulate two-device offline transfer protocol
+        run: flutter test test/transfer_packet_test.dart
       - name: Build Android APK
         run: flutter build apk --release
       # The release build installs a large NDK and CMake toolchain. They are

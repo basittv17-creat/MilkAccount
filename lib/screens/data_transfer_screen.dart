@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -12,6 +13,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../data/app_database.dart';
 import '../services/data_transfer_service.dart';
+import '../services/transfer_packet_codec.dart';
 
 class DataTransferScreen extends StatefulWidget {
   const DataTransferScreen({super.key, required this.language});
@@ -30,14 +32,12 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
   final _codeController = TextEditingController();
   final _random = Random.secure();
   final Set<String> _selectedAccounts = {};
-  final Map<int, String> _receivedChunks = {};
+  final _packetAssembler = TransferPacketAssembler();
 
   List<Map<String, Object?>> _accounts = [];
   String? _sessionCode;
   String? _endpointId;
-  String? _transferId;
   String _status = '';
-  int _expectedChunks = 0;
   int _mode = 0;
   bool _busy = false;
   bool _advertising = false;
@@ -187,28 +187,37 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
 
   Future<void> _preparePermissions() async {
     if (!_androidSupported) throw StateError(_t('androidOnly'));
-    final requested = await <Permission>[
-      Permission.locationWhenInUse,
-      Permission.bluetooth,
-      Permission.bluetoothAdvertise,
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.nearbyWifiDevices,
-    ].request();
 
-    final required = [
-      Permission.bluetooth,
-      Permission.bluetoothAdvertise,
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.nearbyWifiDevices,
-    ];
-    if (required.any((permission) => requested[permission]?.isGranted != true)) {
+    // Nearby Connections uses the legacy Location permission through API 31,
+    // Bluetooth runtime permissions from API 31, and Nearby Wi-Fi from API 32.
+    final sdkInt = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+    final permissions = <Permission>[];
+    if (sdkInt <= 31) {
+      permissions.add(Permission.locationWhenInUse);
+    }
+    if (sdkInt <= 30) {
+      permissions.add(Permission.bluetooth);
+    }
+    if (sdkInt >= 31) {
+      permissions.addAll([
+        Permission.bluetoothAdvertise,
+        Permission.bluetoothConnect,
+        Permission.bluetoothScan,
+      ]);
+    }
+    if (sdkInt >= 32) {
+      permissions.add(Permission.nearbyWifiDevices);
+    }
+
+    final requested = permissions.isEmpty
+        ? <Permission, PermissionStatus>{}
+        : await permissions.request();
+    if (permissions.any((permission) => requested[permission]?.isGranted != true)) {
       throw StateError(_t('permission'));
     }
-    if (requested[Permission.locationWhenInUse]?.isGranted != true) {
-      throw StateError(_t('permission'));
-    }
+
+    // The Nearby Connections plugin warns that GPS/location services should
+    // remain enabled because otherwise peers can disconnect on some devices.
     if (!await Permission.locationWhenInUse.serviceStatus.isEnabled) {
       throw StateError(_t('location'));
     }
@@ -222,9 +231,7 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       _sessionCode = (100000 + _random.nextInt(900000)).toString();
       _connected = false;
       _endpointId = null;
-      _receivedChunks.clear();
-      _expectedChunks = 0;
-      _transferId = null;
+      _packetAssembler.reset();
       _handlingBundle = false;
     });
     try {
@@ -413,25 +420,15 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
     _sent = true;
     try {
       final bundle = await _transferService.createBundle(_selectedAccounts.toList());
-      final encoded = base64Encode(utf8.encode(bundle));
-      final transferId = '${DateTime.now().microsecondsSinceEpoch}-${_random.nextInt(999999)}';
-      final total = (encoded.length / _chunkLength).ceil();
-      for (var index = 0; index < total; index++) {
-        final start = index * _chunkLength;
-        final end = min(start + _chunkLength, encoded.length);
-        final packet = jsonEncode({
-          'type': 'milk_account_chunk',
-          'transfer_id': transferId,
-          'index': index,
-          'total': total,
-          'data': encoded.substring(start, end),
-        });
-        await Nearby().sendBytesPayload(
-          endpointId,
-          Uint8List.fromList(utf8.encode(packet)),
-        );
+      final packets = TransferPacketCodec.encodeBundle(
+        bundle,
+        transferId: '${DateTime.now().microsecondsSinceEpoch}-${_random.nextInt(999999)}',
+        chunkLength: _chunkLength,
+      );
+      for (var index = 0; index < packets.length; index++) {
+        await Nearby().sendBytesPayload(endpointId, packets[index]);
         if (!mounted) return;
-        setState(() => _status = '${_t('online')} ${index + 1}/$total');
+        setState(() => _status = '${_t('online')} ${index + 1}/${packets.length}');
       }
       if (mounted) setState(() => _status = _t('sent'));
     } catch (error) {
@@ -451,39 +448,15 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       if (packet['type'] != 'milk_account_chunk') {
         throw const FormatException('Unknown transfer packet.');
       }
-      final transferId = packet['transfer_id'];
-      final index = packet['index'];
-      final total = packet['total'];
-      final data = packet['data'];
-      if (transferId is! String ||
-          index is! int ||
-          total is! int ||
-          data is! String ||
-          total < 1 ||
-          total > 50000 ||
-          index < 0 ||
-          index >= total) {
-        throw const FormatException('Transfer packet values are invalid.');
+      if (packet['type'] != 'milk_account_chunk') {
+        throw const FormatException('Unknown transfer packet.');
       }
-      if (_transferId != transferId) {
-        _transferId = transferId;
-        _receivedChunks.clear();
-        _expectedChunks = total;
-      }
-      if (_expectedChunks != total) {
-        throw const FormatException('Transfer packet count changed unexpectedly.');
-      }
-      _receivedChunks[index] = data;
+      final bundle = _packetAssembler.add(payload.bytes!);
       if (mounted) {
-        setState(() => _status = '${_t('online')} ${_receivedChunks.length}/$_expectedChunks');
+        setState(() => _status = '${_t('online')} ${_packetAssembler.receivedCount}/${_packetAssembler.totalChunks}');
       }
-      if (_receivedChunks.length != _expectedChunks || _handlingBundle) return;
+      if (bundle == null || _handlingBundle) return;
       _handlingBundle = true;
-      final encoded = List.generate(_expectedChunks, (i) => _receivedChunks[i] ?? '').join();
-      if (encoded.isEmpty || List.generate(_expectedChunks, (i) => _receivedChunks.containsKey(i)).any((has) => !has)) {
-        throw const FormatException('Some transfer packets are missing.');
-      }
-      final bundle = utf8.decode(base64Decode(encoded));
       final result = await _mergeWithCustomerChoices(bundle);
       await Nearby().sendBytesPayload(
         endpointId,
