@@ -50,6 +50,27 @@ jobs:
         run: flutter test
       - name: Build Android APK
         run: flutter build apk --release
+      # The release build installs a large NDK and CMake toolchain. They are
+      # no longer needed once the APK exists; remove them and Gradle caches so
+      # the emulator system image can be installed without exhausting runner disk.
+      - name: Free disk space for Android emulator
+        run: |
+          ANDROID_SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "Disk space before cleanup:"
+          df -h /
+          sudo rm -rf "$ANDROID_SDK/ndk" "$ANDROID_SDK/cmake"
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/daemon"
+          echo "Disk space after cleanup:"
+          df -h /
+      # Create a valid diagnostics archive before emulator setup. If the
+      # emulator action itself fails before running its script, the artifact
+      # still exists and clearly contains an empty fatal-log file.
+      - name: Prepare fatal crash logs archive
+        run: |
+          mkdir -p artifacts
+          : > artifacts/fatal-logs.txt
+          zip -j -q artifacts/fatal-crash-logs.zip artifacts/fatal-logs.txt
+          rm artifacts/fatal-logs.txt
       - name: Install APK and check startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
