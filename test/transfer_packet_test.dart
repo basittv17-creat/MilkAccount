@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:milk_account/services/transfer_packet_codec.dart';
@@ -57,7 +58,7 @@ void main() {
     test('rejects malformed packets and inconsistent packet totals', () {
       final receiver = TransferPacketAssembler();
       expect(
-        () => receiver.add(utf8.encode('{broken}')),
+        () => receiver.add(Uint8List.fromList(utf8.encode('{broken}'))),
         throwsFormatException,
       );
       final packet = TransferPacketCodec.encodeBundle(
@@ -73,7 +74,7 @@ void main() {
         'total': 99,
         'data': 'YWJjZA==',
       }));
-      expect(() => receiver.add(changedTotal), throwsFormatException);
+      expect(() => receiver.add(Uint8List.fromList(changedTotal)), throwsFormatException);
     });
   });
 }
