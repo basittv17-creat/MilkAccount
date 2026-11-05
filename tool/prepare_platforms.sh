@@ -14,7 +14,7 @@ else
 fi
 
 # Keep the generated app compatible with Android plugins that require API 36.
-# compileSdk is a build-time setting; minSdk/targetSdk remain unchanged.
+# compileSdk and targetSdk are explicitly pinned to the Google Play API 36 requirement.
 APP_GRADLE="android/app/build.gradle.kts"
 if [[ -f "$APP_GRADLE" ]]; then
   if grep -q 'compileSdk = flutter.compileSdkVersion' "$APP_GRADLE"; then
@@ -23,6 +23,14 @@ if [[ -f "$APP_GRADLE" ]]; then
     echo "Could not safely set Android compileSdk to 36 in $APP_GRADLE" >&2
     exit 1
   fi
+fi
+
+# Play Console target API requirement: compileSdk alone is not sufficient.
+if grep -q 'targetSdk = flutter.targetSdkVersion' "$APP_GRADLE"; then
+  sed -i 's/targetSdk = flutter\.targetSdkVersion/targetSdk = 36/' "$APP_GRADLE"
+elif ! grep -qE 'targetSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
+  echo "Could not safely set Android targetSdk to 36 in $APP_GRADLE" >&2
+  exit 1
 fi
 
 # Add the runtime permission required for explicitly opted-in direct SMS sending.
@@ -62,5 +70,10 @@ fi
 # Fail early if the generated application Gradle file did not receive API 36.
 if ! grep -qE 'compileSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
   echo "Android app compileSdk must be 36; generated configuration is not correct." >&2
+  exit 1
+fi
+
+if ! grep -qE 'targetSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
+  echo "Android app targetSdk must be 36 for the current Play target requirement." >&2
   exit 1
 fi
