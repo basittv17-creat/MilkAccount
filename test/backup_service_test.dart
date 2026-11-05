@@ -53,7 +53,7 @@ void main() {
     expect(bytes.length, greaterThan(16));
     expect(
       String.fromCharCodes(bytes.take(16)),
-      'SQLite format 3\\u0000',
+      'SQLite format 3\u0000',
     );
 
     final backupFile = File(
