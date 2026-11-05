@@ -337,7 +337,7 @@ class _DashboardState extends State<Dashboard> {
                     context: context,
                     applicationName: 'Milk Account',
                     applicationVersion: '1.0.0',
-                    applicationLegalese: 'Milk Collection & Account Management App',
+                    applicationLegalese: 'Milk Collection & Account Management App\nPackage ID: com.awasigogera.milkaccount',
                   );
                 }),
               ],
