@@ -58,16 +58,25 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     super.initState();
     _account = _accounts.getAccount(widget.accountId);
     _records = _load();
-    _account.then((value) {
-      if (mounted) setState(() { _accountValue = value; _records = _load(); });
-    });
   }
 
   Future<List<Map<String, Object?>>> _load() async {
+    // Load account metadata before calculating the activity range. This avoids
+    // starting a query with incomplete account state and then replacing its
+    // Future while the first query is still running.
+    final account = _accountValue ?? await _account;
+    if (account == null) return [];
+    _accountValue = account;
+
     final start = _range == _ActivityRange.all
-      ? (DateTime.tryParse(_accountValue?['start_at']?.toString() ?? '')?.toLocal() ?? DateTime(2000))
-      : _start;
-    return _activity.load(accountId: widget.accountId, startDay: start, endDay: _end);
+        ? (DateTime.tryParse(account['start_at']?.toString() ?? '')?.toLocal() ??
+            DateTime(2000))
+        : _start;
+    return _activity.load(
+      accountId: widget.accountId,
+      startDay: start,
+      endDay: _end,
+    );
   }
 
   void _refresh() => _records = _load();
@@ -76,8 +85,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     final saved = await Navigator.push<bool>(context, MaterialPageRoute(
       builder: (_) => NewAccountScreen(language: widget.language, account: account)));
     if (saved == true && mounted) {
-      setState(() { _account = _accounts.getAccount(widget.accountId); });
-      _account.then((value) { if (mounted) setState(() { _accountValue = value; _records = _load(); }); });
+      setState(() {
+        _accountValue = null;
+        _account = _accounts.getAccount(widget.accountId);
+        _records = _load();
+      });
     }
   }
 
