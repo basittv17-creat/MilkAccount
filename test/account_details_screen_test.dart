@@ -90,7 +90,7 @@ void main() {
     expect(find.text('باقی ایڈوانس'), findsOneWidget);
     expect(find.text('Rs. 1000.00'), findsWidgets);
 
-    await AppDatabase.instance.close();
+    await tester.runAsync(AppDatabase.instance.close);
   });
 
   testWidgets('remaining advance never displays a negative value',
@@ -105,6 +105,6 @@ void main() {
     expect(find.text('Rs. 0.00'), findsOneWidget);
     expect(find.text('Rs. -500.00'), findsNothing);
 
-    await AppDatabase.instance.close();
+    await tester.runAsync(AppDatabase.instance.close);
   });
 }
