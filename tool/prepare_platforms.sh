@@ -6,8 +6,8 @@ set -euo pipefail
 if [[ ! -d android || ! -f web/index.html ]]; then
   flutter create \
     --platforms=android,web \
-    --project-name milk_account \
-    --org com.milkaccount \
+    --project-name milkaccount \
+    --org com.awasigogera \
     .
 else
   echo "Android and Web platform folders already exist; leaving them unchanged."
