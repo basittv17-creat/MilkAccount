@@ -60,17 +60,27 @@ void main() {
       home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
     ));
 
+    // Wait for the account FutureBuilder first. Until it completes, the
+    // customer ListView (and its scrollable) does not exist in the widget tree.
+    final customerName = find.text('Advance Summary Regression');
+    for (var attempt = 0; attempt < 50; attempt++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      if (customerName.evaluate().isNotEmpty) break;
+    }
+    expect(customerName, findsOneWidget);
+
     // The account page is a lazy ListView. The monthly summary sits below
-    // the customer card and period controls, so it is not built until the test
-    // scrolls to that section. Scroll first to mount its FutureBuilder.
+    // the customer card and period controls, so scroll to mount its FutureBuilder.
     final listView = find.byType(ListView).first;
     for (var attempt = 0; attempt < 10; attempt++) {
       await tester.drag(listView, const Offset(0, -500));
       await tester.pump();
     }
 
-    // sqflite_common_ffi performs real asynchronous work outside the widget
-    // test's fake-async clock. Poll after the summary section has been built.
+    // Poll the real async SQLite query after the summary section is mounted.
     final ledgerHeading = find.text('ماہانہ دودھ اور ایڈوانس کا مکمل حساب');
     for (var attempt = 0; attempt < 50; attempt++) {
       await tester.runAsync(() async {
