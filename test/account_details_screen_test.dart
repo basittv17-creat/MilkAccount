@@ -66,7 +66,8 @@ void main() {
 
   testWidgets('does not show advance summary when customer received no advance',
       (tester) async {
-    final accountId = await createAccountWithMilk();
+    final accountId = await tester.runAsync(createAccountWithMilk) ??
+        (throw StateError('Account setup did not complete.'));
     await pumpAccountDetails(tester, accountId);
 
     expect(find.text('دودھ کی رقم'), findsOneWidget);
@@ -74,12 +75,15 @@ void main() {
     expect(find.text('ایڈوانس دیا'), findsNothing);
     expect(find.text('باقی ایڈوانس'), findsNothing);
 
-    await AppDatabase.instance.close();
+    await tester.runAsync(AppDatabase.instance.close);
   });
 
   testWidgets('shows advance and positive remaining amount when advance exists',
       (tester) async {
-    final accountId = await createAccountWithMilk(advancePaisa: 200000);
+    final accountId = await tester.runAsync(
+          () => createAccountWithMilk(advancePaisa: 200000),
+        ) ??
+        (throw StateError('Account setup did not complete.'));
     await pumpAccountDetails(tester, accountId);
 
     expect(find.text('ایڈوانس دیا'), findsOneWidget);
@@ -91,7 +95,10 @@ void main() {
 
   testWidgets('remaining advance never displays a negative value',
       (tester) async {
-    final accountId = await createAccountWithMilk(advancePaisa: 50000);
+    final accountId = await tester.runAsync(
+          () => createAccountWithMilk(advancePaisa: 50000),
+        ) ??
+        (throw StateError('Account setup did not complete.'));
     await pumpAccountDetails(tester, accountId);
 
     expect(find.text('باقی ایڈوانس'), findsOneWidget);
