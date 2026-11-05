@@ -47,13 +47,27 @@ void main() {
     return accountId;
   }
 
-  testWidgets('does not show advance summary when customer received no advance',
-      (tester) async {
-    final accountId = await createAccountWithMilk();
+  Future<void> pumpAccountDetails(WidgetTester tester, String accountId) async {
     await tester.pumpWidget(MaterialApp(
       home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
     ));
-    await tester.pumpAndSettle();
+
+    // sqflite_common_ffi performs real asynchronous work. Let its isolate
+    // complete outside the widget test's fake-async clock before pumping.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pump();
+  }
+
+  testWidgets('does not show advance summary when customer received no advance',
+      (tester) async {
+    final accountId = await createAccountWithMilk();
+    await pumpAccountDetails(tester, accountId);
 
     expect(find.text('دودھ کی رقم'), findsOneWidget);
     expect(find.text('Rs. 1000.00'), findsWidgets);
@@ -66,10 +80,7 @@ void main() {
   testWidgets('shows advance and positive remaining amount when advance exists',
       (tester) async {
     final accountId = await createAccountWithMilk(advancePaisa: 200000);
-    await tester.pumpWidget(MaterialApp(
-      home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
-    ));
-    await tester.pumpAndSettle();
+    await pumpAccountDetails(tester, accountId);
 
     expect(find.text('ایڈوانس دیا'), findsOneWidget);
     expect(find.text('باقی ایڈوانس'), findsOneWidget);
@@ -81,10 +92,7 @@ void main() {
   testWidgets('remaining advance never displays a negative value',
       (tester) async {
     final accountId = await createAccountWithMilk(advancePaisa: 50000);
-    await tester.pumpWidget(MaterialApp(
-      home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
-    ));
-    await tester.pumpAndSettle();
+    await pumpAccountDetails(tester, accountId);
 
     expect(find.text('باقی ایڈوانس'), findsOneWidget);
     expect(find.text('Rs. 0.00'), findsOneWidget);
