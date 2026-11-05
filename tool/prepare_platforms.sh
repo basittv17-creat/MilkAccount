@@ -53,8 +53,8 @@ fi
 # application ID in both the namespace and installed APK metadata.
 EXPECTED_APP_ID="com.awasigogera.milkaccount"
 if [[ ! -f "$APP_GRADLE" ]] ||
-   ! grep -qE "namespace[[:space:]]*=[[:space:]]*\\"$EXPECTED_APP_ID\\" " "$APP_GRADLE" ||
-   ! grep -qE "applicationId[[:space:]]*=[[:space:]]*\\"$EXPECTED_APP_ID\\" " "$APP_GRADLE"; then
+   ! grep -Fq "namespace = \"$EXPECTED_APP_ID\"" "$APP_GRADLE" ||
+   ! grep -Fq "applicationId = \"$EXPECTED_APP_ID\"" "$APP_GRADLE"; then
   echo "Android namespace and applicationId must both be $EXPECTED_APP_ID." >&2
   exit 1
 fi
