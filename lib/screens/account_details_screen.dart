@@ -328,7 +328,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       final amount = (row['total_paisa'] as int?) ?? 0;
       final advanceAmount = (row['amount_paisa'] as int?) ?? 0;
       if (isAdvance) balancePaisa += advanceAmount;
-      if (isMilk) balancePaisa -= amount;
+      if (isMilk) {
+        balancePaisa -= amount;
+        if (balancePaisa < 0) balancePaisa = 0;
+      }
 
       final milkLabel = isMilk
           ? ((row['quantity_grams'] as int) / 1000).toStringAsFixed(1)
