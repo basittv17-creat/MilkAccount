@@ -56,26 +56,28 @@ jobs:
           script: |
             set -e
             mkdir -p artifacts
-            trap 'adb logcat -d -v threadtime > artifacts/emulator-logcat.txt 2>&1 || true' EXIT
+            RAW_LOG="/tmp/milk-account-emulator-logcat.txt"
+            FATAL_LOG="artifacts/fatal-logs.txt"
+            trap 'adb logcat -d -v threadtime > "$RAW_LOG" 2>&1 || true; grep -E -i -B 5 -A 40 "FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in " "$RAW_LOG" > "$FATAL_LOG" || true; rm -f "$RAW_LOG"' EXIT
             adb logcat -c
             adb install -r build/app/outputs/flutter-apk/app-release.apk
             adb shell monkey -p com.awasigogera.milkaccount -c android.intent.category.LAUNCHER 1
             sleep 30
-            adb logcat -d -v threadtime > artifacts/emulator-logcat.txt
-            if grep -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' artifacts/emulator-logcat.txt; then
-              echo "App crash or ANR detected in Android emulator." >&2
+            adb logcat -d -v threadtime > "$RAW_LOG"
+            if grep -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' "$RAW_LOG"; then
+              echo "Fatal crash or ANR detected. See fatal-logs.txt artifact." >&2
               exit 1
             fi
             if ! adb shell pidof com.awasigogera.milkaccount >/dev/null; then
-              echo "App process is not running after startup; see emulator-logcat.txt." >&2
+              echo "App process is not running after startup. Check fatal-logs.txt artifact." >&2
               exit 1
             fi
-      - name: Upload emulator crash diagnostics
+      - name: Upload fatal crash logs only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: milk-account-emulator-crash-logs
-          path: artifacts/emulator-logcat.txt
+          name: milk-account-fatal-crash-logs
+          path: artifacts/fatal-logs.txt
           if-no-files-found: warn
       - name: Build Web
         run: flutter build web --release
