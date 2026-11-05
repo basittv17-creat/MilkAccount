@@ -23,7 +23,7 @@ class DataTransferScreen extends StatefulWidget {
 }
 
 class _DataTransferScreenState extends State<DataTransferScreen> {
-  static const _serviceId = 'com.milkaccount.app.data_transfer';
+  static const _serviceId = 'com.awasigogera.milkaccount.data_transfer';
   static const _chunkLength = 12 * 1024;
 
   final _transferService = DataTransferService();
