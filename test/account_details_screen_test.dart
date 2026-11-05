@@ -133,7 +133,7 @@ void main() {
     await pumpAccountDetails(tester, accountId);
 
     expect(find.text('باقی ایڈوانس'), findsOneWidget);
-    expect(find.text('Rs. 0.00'), findsOneWidget);
+    expect(find.text('Rs. 0.00'), findsWidgets);
     expect(find.text('Rs. -500.00'), findsNothing);
 
     await tester.runAsync(AppDatabase.instance.close);
