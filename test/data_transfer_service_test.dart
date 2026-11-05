@@ -3,7 +3,10 @@ import 'package:milk_account/services/data_transfer_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _database() async {
-  final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+  final db = await databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    singleInstance: false,
+  );
   await db.execute('''
     CREATE TABLE accounts (
       id TEXT PRIMARY KEY,
