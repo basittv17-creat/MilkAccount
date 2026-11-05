@@ -2,6 +2,8 @@
 
 Offline-first dairy customer ledger app built with Flutter and Dart.
 
+**Android application ID:** `com.awasigogera.milkaccount`
+
 ## Phase 2: Approved multilingual dashboard design
 This update aligns the starter dashboard with the user's approved three-language visual reference: deep blue branded header, compact advertisement banner, blue Milk Entry card, yellow Advance card, green Accounts card, and four-item bottom navigation. First-launch language selection and dashboard copy now support Urdu (Pakistan), English, and Hindi, with RTL direction for Urdu and LTR direction for English/Hindi.
 
