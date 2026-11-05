@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:telephony_sms/telephony_sms.dart';
+
 import '../data/no_milk_repository.dart';
 import '../utils/phone_number.dart';
 
@@ -23,7 +22,6 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
   TimeOfDay _time = TimeOfDay.now();
   bool _sendSms = false;
   bool _sendWhatsApp = false;
-  final TelephonySMS _telephonySms = TelephonySMS();
   bool _saving = false;
   bool _showDetails = false;
 
@@ -70,26 +68,106 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
     );
   }
 
+  Future<void> _showSmsQueue(List<Map<String, Object?>> savedRows) async {
+    final openedIds = <String>{};
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(t('SMS پیغامات', 'SMS messages', 'SMS संदेश')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t(
+                  'ہر گاہک کے سامنے SMS بٹن دبائیں۔ پیغام SMS ایپ میں کھلے گا؛ وہاں سے خود Send کریں، پھر اگلے گاہک کے لیے واپس آئیں۔',
+                  'Tap the SMS button for each customer. The message opens in your SMS app; send it there, then return for the next customer.',
+                  'हर ग्राहक के सामने SMS बटन दबाएँ। संदेश SMS ऐप में खुलेगा; वहाँ से Send करें और फिर अगले ग्राहक के लिए वापस आएँ।',
+                ),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 360),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: savedRows.map((row) {
+                    final id = row['id'] as String;
+                    final phone = _phone(row);
+                    final opened = openedIds.contains(id);
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(row['customer_name']?.toString() ?? ''),
+                      subtitle: Text(
+                        phone.isEmpty
+                            ? t('فون نمبر موجود نہیں', 'No phone number', 'फोन नंबर नहीं है')
+                            : phone,
+                      ),
+                      trailing: IconButton(
+                        tooltip: t('SMS ایپ کھولیں', 'Open SMS app', 'SMS ऐप खोलें'),
+                        icon: Icon(
+                          opened ? Icons.check_circle : Icons.sms_outlined,
+                          color: opened ? const Color(0xFF079B37) : const Color(0xFF0756C9),
+                        ),
+                        onPressed: phone.isEmpty
+                            ? null
+                            : () async {
+                                final uri = Uri(
+                                  scheme: 'sms',
+                                  path: phone,
+                                  queryParameters: {'body': _nagaMessage(row)},
+                                );
+                                try {
+                                  final launched = await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                  if (launched && dialogContext.mounted) {
+                                    setDialogState(() => openedIds.add(id));
+                                  } else if (!launched && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          t(
+                                            'SMS ایپ نہیں کھل سکی',
+                                            'SMS app could not be opened',
+                                            'SMS ऐप नहीं खुल सकी',
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (error) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('SMS: $error')),
+                                    );
+                                  }
+                                }
+                              },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('مکمل', 'Done', 'हो गया')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _sendNotifications(List<Map<String, Object?>> savedRows) async {
     if (!_sendSms && !_sendWhatsApp) return;
+    if (_sendSms) await _showSmsQueue(savedRows);
+
     final errors = <String>[];
-    if (_sendSms && Platform.isAndroid) {
-      try {
-        final granted = await _telephonySms.requestPermission();
-        if (!granted) {
-          errors.add(t('SMS کی اجازت نہیں ملی', 'SMS permission was not granted', 'SMS अनुमति नहीं मिली'));
-        } else {
-          for (final row in savedRows) {
-            final phone = _phone(row);
-            if (phone.isEmpty) { errors.add('${row['customer_name']}: ${t('فون نمبر موجود نہیں', 'No phone number', 'फोन नंबर नहीं है')}'); continue; }
-            try { await _telephonySms.sendSMS(phone: phone, message: _nagaMessage(row)); }
-            catch (error) { errors.add('${row['customer_name']}: SMS $error'); }
-          }
-        }
-      } catch (error) { errors.add('SMS: $error'); }
-    } else if (_sendSms && !Platform.isAndroid) {
-      errors.add(t('براہ راست SMS صرف Android پر دستیاب ہے', 'Direct SMS is available on Android only', 'सीधा SMS केवल Android पर उपलब्ध है'));
-    }
     if (_sendWhatsApp) {
       for (final row in savedRows) {
         final phone = normalizeInternationalPhone(
@@ -97,23 +175,38 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
           phoneNumber: row['phone_number']?.toString(),
         );
         if (phone == null) {
-          errors.add('${row['customer_name']}: ${t('درست فون نمبر موجود نہیں', 'No valid phone number', 'मान्य फोन नंबर नहीं है')}');
+          errors.add(
+            '${row['customer_name']}: ${t('درست فون نمبر موجود نہیں', 'No valid phone number', 'मान्य फोन नंबर नहीं है')}',
+          );
           continue;
         }
         final uri = Uri.https('wa.me', '/$phone', {'text': _nagaMessage(row)});
         try {
-          final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+          final opened = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
           if (!opened) {
-            errors.add('${row['customer_name']}: ${t('WhatsApp نہیں کھل سکا، ایپ انسٹال یا اپ ڈیٹ چیک کریں', 'WhatsApp could not be opened; check that it is installed and updated', 'WhatsApp नहीं खुला; ऐप इंस्टॉल या अपडेट जाँचें')}');
+            errors.add(
+              '${row['customer_name']}: ${t('WhatsApp نہیں کھل سکا، ایپ انسٹال یا اپ ڈیٹ چیک کریں', 'WhatsApp could not be opened; check that it is installed and updated', 'WhatsApp नहीं खुला; ऐप इंस्टॉल या अपडेट जाँचें')}',
+            );
           }
           if (savedRows.length > 1) {
             await Future<void>.delayed(const Duration(seconds: 2));
           }
-        } catch (error) { errors.add('${row['customer_name']}: WhatsApp $error'); }
+        } catch (error) {
+          errors.add('${row['customer_name']}: WhatsApp $error');
+        }
       }
     }
+
     if (errors.isNotEmpty && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errors.take(3).join('\n')), duration: const Duration(seconds: 6)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errors.take(3).join('\n')),
+          duration: const Duration(seconds: 6),
+        ),
+      );
     }
   }
 
@@ -473,7 +566,7 @@ class _NoMilkScreenState extends State<NoMilkScreen> {
             onChanged: (value) => setState(() => _sendSms = value ?? false),
             activeColor: const Color(0xFF08A832),
             secondary: const Icon(Icons.sms, color: Color(0xFF0756C9)),
-            title: Text(t('SMS بھیجیں', 'Send SMS', 'SMS भेजें')),
+            title: Text(t('SMS ایپ کھولیں', 'Open SMS app', 'SMS ऐप खोलें')),
             contentPadding: EdgeInsets.zero,
           ),
           CheckboxListTile(
