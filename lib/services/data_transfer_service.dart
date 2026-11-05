@@ -388,7 +388,9 @@ class DataTransferService {
     _requiredString(value, 'customer_name');
     _requiredString(value, 'father_name');
     _requiredString(value, 'country_code');
-    _requiredString(value, 'phone_number');
+    if (value['phone_number'] is! String) {
+      throw const FormatException('A customer phone number is invalid.');
+    }
     _requiredString(value, 'start_at');
     _requiredString(value, 'created_at');
     _requiredString(value, 'updated_at');
