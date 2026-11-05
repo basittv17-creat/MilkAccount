@@ -432,6 +432,7 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       }
       if (mounted) setState(() => _status = _t('sent'));
     } catch (error) {
+      _sent = false;
       if (mounted) setState(() => _status = '${_t('error')}: $error');
     }
   }
@@ -444,9 +445,6 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       if (packet['type'] == 'milk_account_ack') {
         if (mounted) setState(() => _status = 'The other phone confirmed the transfer.');
         return;
-      }
-      if (packet['type'] != 'milk_account_chunk') {
-        throw const FormatException('Unknown transfer packet.');
       }
       if (packet['type'] != 'milk_account_chunk') {
         throw const FormatException('Unknown transfer packet.');
