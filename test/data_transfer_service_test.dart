@@ -5,7 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 Future<Database> _database() async {
   final db = await databaseFactoryFfi.openDatabase(
     inMemoryDatabasePath,
-    singleInstance: false,
+    options: OpenDatabaseOptions(singleInstance: false),
   );
   await db.execute('''
     CREATE TABLE accounts (
