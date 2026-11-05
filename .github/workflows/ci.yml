@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# Give every run its own concurrency group: new runs never cancel older runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
@@ -58,26 +63,39 @@ jobs:
             mkdir -p artifacts
             RAW_LOG="/tmp/milk-account-emulator-logcat.txt"
             FATAL_LOG="artifacts/fatal-logs.txt"
-            trap 'adb logcat -d -v threadtime > "$RAW_LOG" 2>&1 || true; grep -E -i -B 5 -A 40 "FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in " "$RAW_LOG" > "$FATAL_LOG" || true; rm -f "$RAW_LOG"' EXIT
+            FATAL_ZIP="artifacts/fatal-crash-logs.zip"
+            : > "$FATAL_LOG"
+            collect_fatal_logs() {
+              adb logcat -d -v threadtime > "$RAW_LOG" 2>&1 || true
+              grep -E -i -B 5 -A 40 "FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in " "$RAW_LOG" > "$FATAL_LOG" || true
+              if [[ -s "$FATAL_LOG" ]]; then
+                zip -j -q "$FATAL_ZIP" "$FATAL_LOG"
+              else
+                # Keep a valid, empty diagnostics archive when no fatal event occurred.
+                zip -j -q "$FATAL_ZIP" "$FATAL_LOG"
+              fi
+              rm -f "$RAW_LOG"
+            }
+            trap collect_fatal_logs EXIT
             adb logcat -c
             adb install -r build/app/outputs/flutter-apk/app-release.apk
             adb shell monkey -p com.awasigogera.milkaccount -c android.intent.category.LAUNCHER 1
-            sleep 30
-            adb logcat -d -v threadtime > "$RAW_LOG"
-            if grep -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' "$RAW_LOG"; then
-              echo "Fatal crash or ANR detected. See fatal-logs.txt artifact." >&2
+            echo "Keeping the app running in the emulator for 4 minutes..."
+            sleep 240
+            if grep -q -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' <(adb logcat -d -v threadtime); then
+              echo "Fatal crash or ANR detected. See the fatal crash ZIP artifact." >&2
               exit 1
             fi
             if ! adb shell pidof com.awasigogera.milkaccount >/dev/null; then
-              echo "App process is not running after startup. Check fatal-logs.txt artifact." >&2
+              echo "App process is not running after the 4-minute emulator test." >&2
               exit 1
             fi
-      - name: Upload fatal crash logs only
+      - name: Upload fatal crash logs ZIP only
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: milk-account-fatal-crash-logs
-          path: artifacts/fatal-logs.txt
+          path: artifacts/fatal-crash-logs.zip
           if-no-files-found: warn
       - name: Build Web
         run: flutter build web --release
