@@ -60,16 +60,17 @@ void main() {
       home: AccountDetailsScreen(accountId: accountId, language: 'ur'),
     ));
 
-    // sqflite_common_ffi performs real asynchronous work. Let its isolate
-    // complete outside the widget test's fake-async clock before pumping.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(seconds: 1));
-    });
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(seconds: 1));
-    });
-    await tester.pump();
+    // sqflite_common_ffi performs real asynchronous work outside the widget
+    // test's fake-async clock. Poll the actual ledger heading instead of
+    // relying on a fixed delay that can expire before both queries finish.
+    final ledgerHeading = find.text('ماہانہ دودھ اور ایڈوانس کا مکمل حساب');
+    for (var attempt = 0; attempt < 50; attempt++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      if (ledgerHeading.evaluate().isNotEmpty) return;
+    }
   }
 
   testWidgets('does not show advance summary when customer received no advance',
