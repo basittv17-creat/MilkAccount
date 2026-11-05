@@ -10,10 +10,18 @@ import 'package:milk_account/services/backup_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory testDatabaseDirectory;
 
-  setUpAll(() {
+  setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+    // Give this test suite its own SQLite directory. Flutter may execute
+    // different test files concurrently, and the default FFI path is shared.
+    testDatabaseDirectory = await Directory.systemTemp.createTemp(
+      'milk_account_backup_test_',
+    );
+    await databaseFactory.setDatabasesPath(testDatabaseDirectory.path);
   });
 
   setUp(() async {
@@ -22,6 +30,13 @@ void main() {
 
   tearDown(() async {
     await AppDatabase.instance.close();
+  });
+
+  tearDownAll(() async {
+    await AppDatabase.instance.close();
+    if (await testDatabaseDirectory.exists()) {
+      await testDatabaseDirectory.delete(recursive: true);
+    }
   });
 
   test('creates a complete SQLite backup snapshot with account data', () async {
@@ -38,7 +53,7 @@ void main() {
     expect(bytes.length, greaterThan(16));
     expect(
       String.fromCharCodes(bytes.take(16)),
-      'SQLite format 3\u0000',
+      'SQLite format 3\\u0000',
     );
 
     final backupFile = File(
