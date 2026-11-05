@@ -62,15 +62,15 @@ jobs:
           rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/daemon"
           echo "Disk space after cleanup:"
           df -h /
-      # Create a valid diagnostics archive before emulator setup. If the
-      # emulator action itself fails before running its script, the artifact
-      # still exists and clearly contains an empty fatal-log file.
-      - name: Prepare fatal crash logs archive
+      # Keep placeholder text files so diagnostics are still uploaded if the
+      # emulator cannot boot; the emulator script replaces them with real logs.
+      - name: Prepare Android diagnostics files
         run: |
           mkdir -p artifacts
+          : > artifacts/android-logcat.txt
           : > artifacts/fatal-logs.txt
-          zip -j -q artifacts/fatal-crash-logs.zip artifacts/fatal-logs.txt
-          rm artifacts/fatal-logs.txt
+          : > artifacts/app-exit-info.txt
+          : > artifacts/emulator-check-status.txt
       # GitHub-hosted Linux runners expose KVM, but the runner user needs
       # the udev rule before android-emulator-runner can detect hardware acceleration.
       - name: Enable KVM for Android emulator
@@ -91,12 +91,12 @@ jobs:
           # The action runs each script line in a separate shell. Keep stateful
           # variables, functions and the EXIT trap inside one checked-in script.
           script: bash tool/check_android_emulator.sh
-      - name: Upload fatal crash logs ZIP only
+      - name: Upload Android diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: milk-account-fatal-crash-logs
-          path: artifacts/fatal-crash-logs.zip
+          path: artifacts/*.txt
           if-no-files-found: warn
       - name: Build Web
         run: flutter build web --release
