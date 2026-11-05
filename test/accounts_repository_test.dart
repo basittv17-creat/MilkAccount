@@ -19,7 +19,8 @@ void main() {
     final nextNumber = await db.rawQuery(
       'SELECT COALESCE(MAX(account_number), 0) + 1 AS next_number FROM accounts',
     );
-    final accountNumber = nextNumber.single['next_number'] as int;
+    // Use a high, distinctive number so partial-number search cannot match another fixture.
+    final accountNumber = (nextNumber.single['next_number'] as int) + 1000000;
     await db.insert('accounts', {
       'id': 'test-account-1',
       'account_number': accountNumber,
