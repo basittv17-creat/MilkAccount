@@ -16,6 +16,14 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
+  Future<void> resetTestDatabase(WidgetTester tester) async {
+    await tester.runAsync(() async {
+      await AppDatabase.instance.close();
+      final path = await AppDatabase.instance.getDatabasePath();
+      await databaseFactory.deleteDatabase(path);
+    });
+  }
+
   Future<String> createAccountWithMilk({int? advancePaisa}) async {
     final now = DateTime.now();
     await AccountRepository().createAccount(
@@ -55,7 +63,7 @@ void main() {
     // sqflite_common_ffi performs real asynchronous work. Let its isolate
     // complete outside the widget test's fake-async clock before pumping.
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(seconds: 1));
     });
     await tester.pump();
     await tester.runAsync(() async {
@@ -66,6 +74,7 @@ void main() {
 
   testWidgets('does not show advance summary when customer received no advance',
       (tester) async {
+    await resetTestDatabase(tester);
     final accountId = await tester.runAsync(createAccountWithMilk) ??
         (throw StateError('Account setup did not complete.'));
     await pumpAccountDetails(tester, accountId);
@@ -80,6 +89,7 @@ void main() {
 
   testWidgets('shows advance and positive remaining amount when advance exists',
       (tester) async {
+    await resetTestDatabase(tester);
     final accountId = await tester.runAsync(
           () => createAccountWithMilk(advancePaisa: 200000),
         ) ??
@@ -95,6 +105,7 @@ void main() {
 
   testWidgets('remaining advance never displays a negative value',
       (tester) async {
+    await resetTestDatabase(tester);
     final accountId = await tester.runAsync(
           () => createAccountWithMilk(advancePaisa: 50000),
         ) ??
