@@ -33,21 +33,16 @@ elif ! grep -qE 'targetSdk[[:space:]]*=[[:space:]]*36' "$APP_GRADLE"; then
   exit 1
 fi
 
-# Add the runtime permission required for explicitly opted-in direct SMS sending.
+# SMS sharing uses Android's external message composer; no SMS permission is needed.
+# Nearby Connections uses Bluetooth, Wi-Fi and legacy Location permission for direct transfers.
+# Camera is used only to scan the nearby-transfer QR code.
 MANIFEST="android/app/src/main/AndroidManifest.xml"
-if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.SEND_SMS' "$MANIFEST"; then
-  sed -i '/<application/i\\    <uses-permission android:name="android.permission.SEND_SMS" />\\n    <uses-feature android:name="android.hardware.telephony" android:required="false" />' "$MANIFEST"
-fi
-
-# Nearby Connections uses Bluetooth and Wi-Fi for direct, offline transfers.
-# These permissions are generated here because the Android folder is created in CI.
 if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.BLUETOOTH_ADVERTISE' "$MANIFEST"; then
   sed -i '/<application/i\\    <uses-permission android:maxSdkVersion="31" android:name="android.permission.ACCESS_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="31" android:name="android.permission.CHANGE_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH_ADMIN" />\\n    <uses-permission android:maxSdkVersion="28" android:name="android.permission.ACCESS_COARSE_LOCATION" />\\n    <uses-permission android:minSdkVersion="29" android:maxSdkVersion="31" android:name="android.permission.ACCESS_FINE_LOCATION" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_ADVERTISE" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_CONNECT" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:minSdkVersion="32" android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:name="android.permission.CAMERA" />\\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
 fi
 
-# Keep legacy Android Gradle DSL enabled for plugins that still cast Android
-# source sets to the legacy AndroidLibrarySourceSet API (telephony_sms 0.1.0).
-# Flutter's newer Android DSL otherwise causes a ClassCastException in that plugin.
+# Keep compatibility switches for the current Flutter plugin set, which still
+# uses the external Kotlin Gradle Plugin and legacy Android Gradle DSL.
 GRADLE_PROPERTIES="android/gradle.properties"
 if [[ -f "$GRADLE_PROPERTIES" ]]; then
   grep -q '^android.newDsl=' "$GRADLE_PROPERTIES" || printf '\nandroid.newDsl=false\n' >> "$GRADLE_PROPERTIES"

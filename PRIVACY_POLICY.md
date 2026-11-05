@@ -1,8 +1,10 @@
 # Milk Account — Privacy Policy
 
-**Effective date: 5 November 2026**
+**Effective date: 5 November 2026**  
+**Developer: Basit TV**  
+**Privacy contact: awasikharal@gmail.com**
 
-Milk Account ("the app") is an offline-first dairy customer ledger application. This policy explains what information the app handles and the choices available to you.
+Milk Account is an offline-first dairy customer ledger application. This policy explains what information the app handles and the choices available to you.
 
 ## 1. Information entered into the app
 
@@ -14,23 +16,28 @@ Depending on the features you use, you may enter:
 
 Please enter information only when you have an appropriate reason and permission to do so.
 
-## 2. Where information is stored
+## 2. Where information is stored and when it is shared
 
-The app stores customer and ledger records in a database on your device. The app does not currently require you to create an online account, and the project does not currently provide a Milk Account-operated cloud database or server for uploading your ledger.
+The app stores customer and ledger records in a database in the app's private storage on your device. The app does not require an online account, and the current project does not provide a Milk Account-operated cloud database or server for uploading your ledger.
 
-Your records may leave the device only when you choose an action such as exporting or sharing a backup/report, printing a report, opening the SMS or WhatsApp share destination, or transferring selected records to another nearby device. Those actions use Android or other apps/services you choose. Their handling of information is governed by their own privacy policies.
+The app does not send your ledger to the developer. Your records may leave the device only when you choose an action such as exporting or sharing a backup/report, printing a report, opening the SMS or WhatsApp share destination, or transferring selected records to another nearby device. Those actions use Android or other apps/services you choose. Their handling of information is governed by their own privacy policies.
+
+Nearby transfer sends the selected account records to the nearby device you choose after the receiving device accepts the connection. Android Nearby Connections and Google Play services may process technical device or connection information to provide discovery and connectivity.
 
 ## 3. Backups and nearby transfer
 
 You can create a database backup and save or share it yourself. A backup can contain the customer and ledger information stored in the app. Keep backup files private and share them only with people you trust.
 
-Nearby transfer is initiated by the user and is intended to send the selected account records directly to a nearby device. The receiving device must accept the connection. Check the selected customers and the receiving device before confirming a transfer.
+Nearby transfer is initiated by the user. Check the selected customers and the receiving device before confirming a transfer.
 
-## 4. Permissions
+## 4. Permissions and device features
 
-Depending on Android version and the features you use, Android may ask for permissions related to nearby Bluetooth/Wi-Fi connections, nearby devices, or other device capabilities. These permissions support user-requested nearby transfer and related app functions. Android controls permission prompts, and you can manage permissions in Android Settings.
+Depending on Android version and the features you use, the app may request:
+- **Camera:** to scan a QR code used to start a nearby data transfer. Camera frames are processed for scanning; the app does not save or upload camera photos or videos.
+- **Bluetooth and nearby Wi-Fi/device permissions:** to discover and connect to another device for a transfer you start.
+- **Location permission on Android 12 (API 31) and earlier:** Android's nearby discovery flow may require this permission. The app also checks that Android Location services are enabled for Nearby Connections on all supported Android versions. The app does not read or store location coordinates and does not use this permission to track your location.
 
-The app's SMS and WhatsApp report actions open an external destination with a prepared message; the app does not silently send an SMS in the background.
+The SMS and WhatsApp report actions open an external app with a prepared message. You review and send the message in that app. Milk Account does not use the restricted Android SEND_SMS permission or silently send SMS messages.
 
 ## 5. Advertising, analytics and tracking
 
@@ -42,7 +49,7 @@ Records remain in the app's local database until you delete them using app featu
 
 ## 7. Security
 
-The app is designed to keep its working ledger on your device. Protect your device with its screen lock, keep Android updated, and protect exported backup files. No method of electronic storage or transfer can be guaranteed to be completely secure.
+The app is designed to keep its working ledger in the app's private storage on your device. Protect your device with its screen lock, keep Android updated, and protect exported backup files. No method of electronic storage or transfer can be guaranteed to be completely secure.
 
 ## 8. Children's privacy
 
@@ -56,6 +63,7 @@ This policy may be updated when app features, data practices, or legal requireme
 
 For privacy questions or requests, contact:
 
+**Basit TV — Milk Account**  
 **awasikharal@gmail.com**
 
 ---

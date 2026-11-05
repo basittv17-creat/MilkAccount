@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'backup_screen.dart';
 
@@ -32,6 +33,9 @@ class SettingsScreen extends StatelessWidget {
         'english': 'English',
         'hindi': 'हिन्दी (Hindi)',
         'current': 'موجودہ زبان',
+        'privacy': 'رازداری کی پالیسی',
+        'privacySub': 'ایپ آپ کے ڈیٹا کو کیسے سنبھالتی ہے',
+        'privacyError': 'رازداری کی پالیسی نہیں کھل سکی',
       },
       'en': {
         'title': 'Settings',
@@ -51,6 +55,9 @@ class SettingsScreen extends StatelessWidget {
         'english': 'English',
         'hindi': 'Hindi',
         'current': 'Current language',
+        'privacy': 'Privacy Policy',
+        'privacySub': 'How the app handles your data',
+        'privacyError': 'Could not open the Privacy Policy',
       },
       'hi': {
         'title': 'सेटिंग्स',
@@ -70,6 +77,9 @@ class SettingsScreen extends StatelessWidget {
         'english': 'English',
         'hindi': 'हिन्दी',
         'current': 'मौजूदा भाषा',
+        'privacy': 'गोपनीयता नीति',
+        'privacySub': 'ऐप आपके डेटा को कैसे संभालता है',
+        'privacyError': 'गोपनीयता नीति नहीं खुल सकी',
       },
     };
     return values[language] ?? values['en']!;
@@ -85,6 +95,16 @@ class SettingsScreen extends StatelessWidget {
         return _text('hindi');
       default:
         return _text('english');
+    }
+  }
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final uri = Uri.parse('https://basittv17-creat.github.io/MilkAccount/');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_text('privacyError'))),
+      );
     }
   }
 
@@ -248,6 +268,13 @@ class SettingsScreen extends StatelessWidget {
                   applicationIcon: const Icon(Icons.local_drink_rounded, size: 42, color: Color(0xFF0756C9)),
                   applicationLegalese: '${_text('aboutBody')}\nPackage ID: com.awasigogera.milkaccount',
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.privacy_tip_rounded, color: Color(0xFF0756C9)),
+                title: Text(_text('privacy'), style: const TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: Text(_text('privacySub')),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () => _openPrivacyPolicy(context),
               ),
             ]),
             const SizedBox(height: 22),

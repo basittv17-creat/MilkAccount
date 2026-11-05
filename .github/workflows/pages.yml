@@ -1,0 +1,40 @@
+name: Publish Milk Account Privacy Policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "PRIVACY_POLICY.md"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: milk-account-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload privacy policy site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Deploy privacy policy
+        id: deployment
+        uses: actions/deploy-pages@v4

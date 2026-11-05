@@ -30,18 +30,6 @@ jobs:
         run: bash tool/prepare_platforms.sh
       - name: Install dependencies
         run: flutter pub get
-      # telephony_sms 0.1.0 pins AGP 9.3.1, which triggers an Android
-      # library source-set ClassCastException. AGP 9.1.1 avoids that regression.
-      - name: Use compatible Android Gradle Plugin for telephony_sms
-        run: |
-          PLUGIN_GRADLE="$(find "$HOME/.pub-cache" -path '*/telephony_sms-0.1.0/android/build.gradle.kts' -print -quit)"
-          if [[ -z "$PLUGIN_GRADLE" ]]; then
-            echo "Could not locate telephony_sms 0.1.0 Android Gradle file" >&2
-            exit 1
-          fi
-          grep -q 'com.android.tools.build:gradle:9.3.1' "$PLUGIN_GRADLE"
-          sed -i 's/com.android.tools.build:gradle:9.3.1/com.android.tools.build:gradle:9.1.1/' "$PLUGIN_GRADLE"
-          grep -q 'com.android.tools.build:gradle:9.1.1' "$PLUGIN_GRADLE"
       - name: Format Dart source
         run: dart format .
       - name: Analyze
@@ -52,20 +40,68 @@ jobs:
         run: flutter test test/transfer_packet_test.dart
       - name: Build Android APK
         run: flutter build apk --release
+      - name: Verify Android package, target API, and restricted SMS permission
+        run: |
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          AAPT="$(find "$SDK_ROOT/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          if [[ -z "$AAPT" ]]; then
+            echo "Android aapt tool was not found." >&2
+            exit 1
+          fi
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          grep -Fq "package: name='com.awasigogera.milkaccount'" <<< "$BADGING"
+          grep -Fq "versionCode='3'" <<< "$BADGING"
+          grep -Fq "targetSdkVersion:'36'" <<< "$BADGING"
+          PERMISSIONS="$("$AAPT" dump permissions "$APK")"
+          if grep -q 'android.permission.SEND_SMS' <<< "$PERMISSIONS"; then
+            echo "Restricted SEND_SMS permission must not be present." >&2
+            exit 1
+          fi
+      - name: Remove temporary debug signing for the upload App Bundle
+        run: |
+          APP_GRADLE="android/app/build.gradle.kts"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle.kts")
+          lines = path.read_text().splitlines(keepends=True)
+          needle = 'signingConfig = signingConfigs.getByName("debug")'
+          matches = [index for index, line in enumerate(lines) if needle in line]
+          if len(matches) != 1:
+              raise SystemExit(
+                  f"Expected exactly one temporary debug signing line, found {len(matches)}; refusing to build a debug-signed AAB."
+              )
+          index = matches[0]
+          indent = lines[index][:len(lines[index]) - len(lines[index].lstrip())]
+          lines[index] = indent + "// Intentionally unsigned: sign this bundle later with the private Play upload key.\n"
+          path.write_text("".join(lines))
+          PY
+          if grep -q 'signingConfig = signingConfigs.getByName("debug")' "$APP_GRADLE"; then
+            echo "Debug signing is still configured for the App Bundle." >&2
+            exit 1
+          fi
       - name: Build Android App Bundle
         run: flutter build appbundle --release
+      - name: Verify App Bundle is unsigned for later Play upload-key signing
+        run: |
+          AAB="build/app/outputs/bundle/release/app-release.aab"
+          if unzip -Z1 "$AAB" | grep -Eq '^META-INF/[^/]+\.(RSA|DSA|EC)$'; then
+            echo "The App Bundle still contains a signing certificate; refusing to publish a debug-signed artifact." >&2
+            exit 1
+          fi
       - name: Build Web
         run: flutter build web --release
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: milk-account-android-apk
+          name: milk-account-android-apk-test
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
       - name: Upload Android App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: milk-account-android-aab
+          name: milk-account-android-aab-unsigned
           path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
       - name: Upload Web Build
