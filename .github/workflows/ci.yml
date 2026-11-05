@@ -88,38 +88,9 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-boot-timeout: 600
-          script: |
-            set -e
-            mkdir -p artifacts
-            RAW_LOG="/tmp/milk-account-emulator-logcat.txt"
-            FATAL_LOG="artifacts/fatal-logs.txt"
-            FATAL_ZIP="artifacts/fatal-crash-logs.zip"
-            : > "$FATAL_LOG"
-            collect_fatal_logs() {
-              adb logcat -d -v threadtime > "$RAW_LOG" 2>&1 || true
-              grep -E -i -B 5 -A 40 "FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in " "$RAW_LOG" > "$FATAL_LOG" || true
-              if [[ -s "$FATAL_LOG" ]]; then
-                zip -j -q "$FATAL_ZIP" "$FATAL_LOG"
-              else
-                # Keep a valid, empty diagnostics archive when no fatal event occurred.
-                zip -j -q "$FATAL_ZIP" "$FATAL_LOG"
-              fi
-              rm -f "$RAW_LOG"
-            }
-            trap collect_fatal_logs EXIT
-            adb logcat -c
-            adb install -r build/app/outputs/flutter-apk/app-release.apk
-            adb shell monkey -p com.awasigogera.milkaccount -c android.intent.category.LAUNCHER 1
-            echo "Keeping the app running in the emulator for 4 minutes..."
-            sleep 240
-            if grep -q -E -i 'FATAL EXCEPTION|Fatal signal [0-9]+|am_crash|ANR in ' <(adb logcat -d -v threadtime); then
-              echo "Fatal crash or ANR detected. See the fatal crash ZIP artifact." >&2
-              exit 1
-            fi
-            if ! adb shell pidof com.awasigogera.milkaccount >/dev/null; then
-              echo "App process is not running after the 4-minute emulator test." >&2
-              exit 1
-            fi
+          # The action runs each script line in a separate shell. Keep stateful
+          # variables, functions and the EXIT trap inside one checked-in script.
+          script: bash tool/check_android_emulator.sh
       - name: Upload fatal crash logs ZIP only
         if: always()
         uses: actions/upload-artifact@v4
