@@ -30,6 +30,8 @@ jobs:
         run: bash tool/prepare_platforms.sh
       - name: Install dependencies
         run: flutter pub get
+      - name: Generate Android launcher icons
+        run: dart run flutter_launcher_icons
       - name: Format Dart source
         run: dart format .
       - name: Analyze
