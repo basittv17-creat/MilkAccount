@@ -41,6 +41,25 @@ if [[ -f "$MANIFEST" ]] && ! grep -q 'android.permission.BLUETOOTH_ADVERTISE' "$
   sed -i '/<application/i\\    <uses-permission android:maxSdkVersion="31" android:name="android.permission.ACCESS_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="31" android:name="android.permission.CHANGE_WIFI_STATE" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH" />\\n    <uses-permission android:maxSdkVersion="30" android:name="android.permission.BLUETOOTH_ADMIN" />\\n    <uses-permission android:maxSdkVersion="28" android:name="android.permission.ACCESS_COARSE_LOCATION" />\\n    <uses-permission android:minSdkVersion="29" android:maxSdkVersion="31" android:name="android.permission.ACCESS_FINE_LOCATION" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_ADVERTISE" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_CONNECT" />\\n    <uses-permission android:minSdkVersion="31" android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:minSdkVersion="32" android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />\\n    <uses-permission android:name="android.permission.CAMERA" />\\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
 fi
 
+# Pin the generated Android toolchain below AGP 9: AGP 9's new DSL currently
+# breaks this Flutter app's legacy Android plugin configuration and AAB signing.
+SETTINGS="android/settings.gradle.kts"
+WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
+if [[ -f "$SETTINGS" ]]; then
+  sed -i -E 's/(com\\.android\\.application.*version ")9\\.[^"]+(".*)/\\18.11.1\\2/' "$SETTINGS"
+  if grep -q 'com.android.application.*version "9\\.' "$SETTINGS"; then
+    echo "Could not pin Android Gradle Plugin below 9." >&2; exit 1
+  fi
+else
+  echo "Missing generated Gradle settings file: $SETTINGS" >&2; exit 1
+fi
+if [[ -f "$WRAPPER" ]]; then
+  sed -i -E 's#gradle-9\\.[^/]+-all\\.zip#gradle-8.13-all.zip#' "$WRAPPER"
+  grep -Fq 'gradle-8.13-all.zip' "$WRAPPER" || { echo "Could not pin Gradle 8.13." >&2; exit 1; }
+else
+  echo "Missing generated Gradle wrapper properties file: $WRAPPER" >&2; exit 1
+fi
+
 # Keep compatibility switches for the current Flutter plugin set, which still
 # uses the external Kotlin Gradle Plugin and legacy Android Gradle DSL.
 GRADLE_PROPERTIES="android/gradle.properties"

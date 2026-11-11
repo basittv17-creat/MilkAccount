@@ -30,8 +30,19 @@ jobs:
         run: bash tool/prepare_platforms.sh
       - name: Install dependencies
         run: flutter pub get
-      - name: Generate Android launcher icons
-        run: dart run flutter_launcher_icons
+      - name: Normalize launcher icon PNG and generate Android icons
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          source = Path("assets/app_icon.png")
+          image = Image.open(source).convert("RGBA")
+          image.save(source, format="PNG", optimize=True)
+          Image.open(source).load()
+          print("Launcher icon normalized to a validated RGBA PNG.")
+          PY
+          dart run flutter_launcher_icons
       - name: Format Dart source
         run: dart format .
       - name: Analyze
