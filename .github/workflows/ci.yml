@@ -60,38 +60,63 @@ jobs:
             echo "Restricted SEND_SMS permission must not be present." >&2
             exit 1
           fi
-      - name: Remove temporary debug signing for the upload App Bundle
+      - name: Configure private Play upload-key signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          APP_GRADLE="android/app/build.gradle.kts"
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64" || { echo "KEYSTORE_BASE64 secret is missing." >&2; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "KEYSTORE_PASSWORD secret is missing." >&2; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "KEY_ALIAS secret is missing." >&2; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "KEY_PASSWORD secret is missing." >&2; exit 1; }
+
+          KEYSTORE_FILE="android/app/upload-keystore.p12"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          chmod 600 "$KEYSTORE_FILE"
+          keytool -list -keystore "$KEYSTORE_FILE" -storetype PKCS12 \
+            -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+
           python3 - <<'PY'
           from pathlib import Path
 
           path = Path("android/app/build.gradle.kts")
-          lines = path.read_text().splitlines(keepends=True)
-          needle = 'signingConfig = signingConfigs.getByName("debug")'
-          matches = [index for index, line in enumerate(lines) if needle in line]
-          if len(matches) != 1:
-              raise SystemExit(
-                  f"Expected exactly one temporary debug signing line, found {len(matches)}; refusing to build a debug-signed AAB."
-              )
-          index = matches[0]
-          indent = lines[index][:len(lines[index]) - len(lines[index].lstrip())]
-          lines[index] = indent + "// Intentionally unsigned: sign this bundle later with the private Play upload key.\n"
-          path.write_text("".join(lines))
+          source = path.read_text()
+          debug_line = 'signingConfig = signingConfigs.getByName("debug")'
+          if source.count(debug_line) != 1:
+              raise SystemExit("Expected exactly one release debug-signing line; refusing unsafe Gradle edit.")
+          if source.count("    buildTypes {") != 1:
+              raise SystemExit("Could not uniquely locate Android buildTypes block; refusing unsafe Gradle edit.")
+
+          signing = """    signingConfigs {
+                  create("release") {
+                      storeFile = file("upload-keystore.p12")
+                      storeType = "PKCS12"
+                      storePassword = System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias = System.getenv("KEY_ALIAS")
+                      keyPassword = System.getenv("KEY_PASSWORD")
+                  }
+              }
+
+          """
+          source = source.replace("    buildTypes {", signing + "    buildTypes {", 1)
+          source = source.replace(debug_line, 'signingConfig = signingConfigs.getByName("release")', 1)
+          path.write_text(source)
           PY
-          if grep -q 'signingConfig = signingConfigs.getByName("debug")' "$APP_GRADLE"; then
-            echo "Debug signing is still configured for the App Bundle." >&2
-            exit 1
-          fi
+
+          grep -Fq 'signingConfig = signingConfigs.getByName("release")' android/app/build.gradle.kts
+          echo "Private upload keystore validated and release signing configured."
       - name: Build Android App Bundle
         run: flutter build appbundle --release
-      - name: Verify App Bundle is unsigned for later Play upload-key signing
+      - name: Verify App Bundle signature
         run: |
+          set -euo pipefail
           AAB="build/app/outputs/bundle/release/app-release.aab"
-          if unzip -Z1 "$AAB" | grep -Eq '^META-INF/[^/]+\.(RSA|DSA|EC)$'; then
-            echo "The App Bundle still contains a signing certificate; refusing to publish a debug-signed artifact." >&2
-            exit 1
-          fi
+          jarsigner -verify -verbose -certs "$AAB" >/dev/null
+          keytool -printcert -jarfile "$AAB" >/dev/null
+          echo "App Bundle signature verification passed."
       - name: Build Web
         run: flutter build web --release
       - name: Upload Android APK
@@ -103,7 +128,7 @@ jobs:
       - name: Upload Android App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: milk-account-android-aab-unsigned
+          name: milk-account-android-aab-signed
           path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
       - name: Upload Web Build
