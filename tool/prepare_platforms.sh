@@ -57,21 +57,32 @@ if not wrapper.is_file():
     raise SystemExit(f"Missing generated Gradle wrapper properties file: {wrapper}")
 
 settings_text = settings.read_text()
-settings_text, agp_count = re.subn(
-    r'(com\.android\.application\s+version\s+")[^"]+(")',
-    r'\g<1>8.11.1\g<2>',
+# Flutter's generated Kotlin DSL uses: id("com.android.application") version "x.y.z" apply false
+# Match that exact plugin declaration and replace only its version.
+agp_pattern = re.compile(
+    r'(^[ \\t]*id\\(["\\']com\\.android\\.application["\\']\\)[ \\t]+version[ \\t]+["\\'])[^"\\']+(["\\'].*$)',
+    re.MULTILINE,
+)
+settings_text, agp_count = agp_pattern.subn(
+    r'\\g<1>8.11.1\\g<2>',
     settings_text,
     count=1,
 )
 if agp_count != 1:
-    raise SystemExit("Could not uniquely locate generated Android Gradle Plugin version.")
-if re.search(r'com\.android\.application\s+version\s+"9\.', settings_text):
+    raise SystemExit(
+        "Could not find exactly one Kotlin DSL declaration for "
+        "id(\"com.android.application\") and its version."
+    )
+if re.search(
+    r'id\\(["\\']com\\.android\\.application["\\']\\)[^\\n]*version[ \\t]+["\\']9\\.',
+    settings_text,
+):
     raise SystemExit("Android Gradle Plugin 9 is still configured.")
 settings.write_text(settings_text)
 
 wrapper_text = wrapper.read_text()
 wrapper_text, gradle_count = re.subn(
-    r'gradle-[0-9][^/]*-all\.zip',
+    r'gradle-[0-9][^/]*-all\\.zip',
     'gradle-8.13-all.zip',
     wrapper_text,
     count=1,
