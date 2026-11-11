@@ -64,7 +64,7 @@ jobs:
           APK="build/app/outputs/flutter-apk/app-release.apk"
           BADGING="$("$AAPT" dump badging "$APK")"
           grep -Fq "package: name='com.awasigogera.milkaccount'" <<< "$BADGING"
-          grep -Fq "versionCode='3'" <<< "$BADGING"
+          grep -Fq "versionCode='4'" <<< "$BADGING"
           grep -Fq "targetSdkVersion:'36'" <<< "$BADGING"
           PERMISSIONS="$("$AAPT" dump permissions "$APK")"
           if grep -q 'android.permission.SEND_SMS' <<< "$PERMISSIONS"; then

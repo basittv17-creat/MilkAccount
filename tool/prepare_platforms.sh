@@ -43,22 +43,43 @@ fi
 
 # Pin the generated Android toolchain below AGP 9: AGP 9's new DSL currently
 # breaks this Flutter app's legacy Android plugin configuration and AAB signing.
-SETTINGS="android/settings.gradle.kts"
-WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
-if [[ -f "$SETTINGS" ]]; then
-  sed -i -E 's/(com\\.android\\.application.*version ")9\\.[^"]+(".*)/\\18.11.1\\2/' "$SETTINGS"
-  if grep -q 'com.android.application.*version "9\\.' "$SETTINGS"; then
-    echo "Could not pin Android Gradle Plugin below 9." >&2; exit 1
-  fi
-else
-  echo "Missing generated Gradle settings file: $SETTINGS" >&2; exit 1
-fi
-if [[ -f "$WRAPPER" ]]; then
-  sed -i -E 's#gradle-9\\.[^/]+-all\\.zip#gradle-8.13-all.zip#' "$WRAPPER"
-  grep -Fq 'gradle-8.13-all.zip' "$WRAPPER" || { echo "Could not pin Gradle 8.13." >&2; exit 1; }
-else
-  echo "Missing generated Gradle wrapper properties file: $WRAPPER" >&2; exit 1
-fi
+# Use Python regexes here so the generated Gradle version strings are matched
+# reliably (the previous sed expressions over-escaped the literal dots).
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+settings = Path("android/settings.gradle.kts")
+wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
+if not settings.is_file():
+    raise SystemExit(f"Missing generated Gradle settings file: {settings}")
+if not wrapper.is_file():
+    raise SystemExit(f"Missing generated Gradle wrapper properties file: {wrapper}")
+
+settings_text = settings.read_text()
+settings_text, agp_count = re.subn(
+    r'(com\.android\.application\s+version\s+")[^"]+(")',
+    r'\g<1>8.11.1\g<2>',
+    settings_text,
+    count=1,
+)
+if agp_count != 1:
+    raise SystemExit("Could not uniquely locate generated Android Gradle Plugin version.")
+if re.search(r'com\.android\.application\s+version\s+"9\.', settings_text):
+    raise SystemExit("Android Gradle Plugin 9 is still configured.")
+settings.write_text(settings_text)
+
+wrapper_text = wrapper.read_text()
+wrapper_text, gradle_count = re.subn(
+    r'gradle-[0-9][^/]*-all\.zip',
+    'gradle-8.13-all.zip',
+    wrapper_text,
+    count=1,
+)
+if gradle_count != 1 or 'gradle-8.13-all.zip' not in wrapper_text:
+    raise SystemExit("Could not pin Gradle 8.13.")
+wrapper.write_text(wrapper_text)
+PY
 
 # Keep compatibility switches for the current Flutter plugin set, which still
 # uses the external Kotlin Gradle Plugin and legacy Android Gradle DSL.
