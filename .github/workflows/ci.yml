@@ -126,8 +126,21 @@ jobs:
           echo "Private upload keystore validated and release signing configured."
       - name: Build Android App Bundle (verbose diagnostics)
         shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          set -o pipefail
+          set -euo pipefail
+          test -n "${KEYSTORE_PASSWORD:-}" || { echo "KEYSTORE_PASSWORD is unavailable to the AAB build step." >&2; exit 1; }
+          test -n "${KEY_ALIAS:-}" || { echo "KEY_ALIAS is unavailable to the AAB build step." >&2; exit 1; }
+          test -n "${KEY_PASSWORD:-}" || { echo "KEY_PASSWORD is unavailable to the AAB build step." >&2; exit 1; }
+          test -s android/app/upload-keystore.p12 || { echo "Validated upload keystore file is missing." >&2; exit 1; }
+          keytool -list -keystore android/app/upload-keystore.p12 -storetype PKCS12 \
+            -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          # The APK task ran before signing secrets were supplied. Stop its Gradle
+          # daemon so the AAB build starts a fresh daemon with the signing environment.
+          (cd android && ./gradlew --stop)
           mkdir -p build/diagnostics
           flutter build appbundle --release --verbose 2>&1 | tee build/diagnostics/appbundle-build-verbose.log
       - name: Upload App Bundle diagnostic log
