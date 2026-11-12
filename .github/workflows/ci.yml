@@ -124,8 +124,19 @@ jobs:
 
           grep -Fq 'signingConfig = signingConfigs.getByName("release")' android/app/build.gradle.kts
           echo "Private upload keystore validated and release signing configured."
-      - name: Build Android App Bundle
-        run: flutter build appbundle --release
+      - name: Build Android App Bundle (verbose diagnostics)
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/diagnostics
+          flutter build appbundle --release --verbose 2>&1 | tee build/diagnostics/appbundle-build-verbose.log
+      - name: Upload App Bundle diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: milk-account-aab-build-diagnostics
+          path: build/diagnostics/appbundle-build-verbose.log
+          if-no-files-found: warn
       - name: Verify App Bundle signature
         run: |
           set -euo pipefail
