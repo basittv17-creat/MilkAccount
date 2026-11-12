@@ -83,7 +83,7 @@ settings.write_text(settings_text)
 wrapper_text = wrapper.read_text()
 wrapper_text, gradle_count = re.subn(
     r'gradle-[0-9][^/]*-all\.zip',
-    'gradle-8.13-all.zip',
+    'gradle-8.14-all.zip',
     wrapper_text,
     count=1,
 )
