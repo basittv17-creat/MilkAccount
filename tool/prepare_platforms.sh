@@ -87,8 +87,8 @@ wrapper_text, gradle_count = re.subn(
     wrapper_text,
     count=1,
 )
-if gradle_count != 1 or 'gradle-8.13-all.zip' not in wrapper_text:
-    raise SystemExit("Could not pin Gradle 8.13.")
+if gradle_count != 1 or 'gradle-8.14-all.zip' not in wrapper_text:
+    raise SystemExit("Could not pin Gradle 8.14.")
 wrapper.write_text(wrapper_text)
 PY
 
